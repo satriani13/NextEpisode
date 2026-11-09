@@ -1,6 +1,6 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -20,9 +20,21 @@ const Tabs = createBottomTabNavigator();
 const theme = { ...DarkTheme, colors: { ...DarkTheme.colors, background: colors.bg, card: colors.card, text: colors.text, primary: colors.accent, border: colors.border } };
 const icon = (e: string) => () => <Text style={{ fontSize: 20 }}>{e}</Text>;
 
+// Cabecera común a las pestañas: usuario activo + botón para cerrar sesión y entrar con otra cuenta.
+function HeaderUser() {
+  const { user, signOut } = useAuth();
+  return (
+    <Pressable onPress={signOut} accessibilityRole="button" accessibilityLabel="Cerrar sesión"
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 14 }}>
+      <Text style={{ color: colors.muted, fontSize: 13 }}>{user?.username}</Text>
+      <Text style={{ color: colors.accent, fontWeight: '700', fontSize: 14 }}>Salir</Text>
+    </Pressable>
+  );
+}
+
 function Home() {
   return (
-    <Tabs.Navigator>
+    <Tabs.Navigator screenOptions={{ headerRight: () => <HeaderUser /> }}>
       <Tabs.Screen name="Buscar" component={SearchScreen} options={{ tabBarIcon: icon('🔍') }} />
       <Tabs.Screen name="Para ti" component={RecommendationsScreen} options={{ tabBarIcon: icon('✨') }} />
       <Tabs.Screen name="Mis series" component={MyShowsScreen} options={{ tabBarIcon: icon('📺') }} />

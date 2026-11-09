@@ -1,4 +1,14 @@
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+
+// SecureStore no existe en web: allí usamos localStorage (solo para desarrollo/pruebas).
+const store = Platform.OS === 'web'
+  ? {
+      getItemAsync: async (k: string) => globalThis.localStorage?.getItem(k) ?? null,
+      setItemAsync: async (k: string, v: string) => { globalThis.localStorage?.setItem(k, v); },
+      deleteItemAsync: async (k: string) => { globalThis.localStorage?.removeItem(k); },
+    }
+  : SecureStore;
 
 // En desarrollo el simulador de iOS alcanza el servidor local; en producción: EXPO_PUBLIC_API_URL.
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3025/api';
@@ -9,13 +19,13 @@ let onUnauthorized: () => void = () => {};
 export const setUnauthorizedHandler = (fn: () => void) => { onUnauthorized = fn; };
 
 export async function loadToken() {
-  token = await SecureStore.getItemAsync(TOKEN_KEY);
+  token = await store.getItemAsync(TOKEN_KEY);
   return token;
 }
 export async function setToken(t: string | null) {
   token = t;
-  if (t) await SecureStore.setItemAsync(TOKEN_KEY, t);
-  else await SecureStore.deleteItemAsync(TOKEN_KEY);
+  if (t) await store.setItemAsync(TOKEN_KEY, t);
+  else await store.deleteItemAsync(TOKEN_KEY);
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {

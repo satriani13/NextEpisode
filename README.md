@@ -6,6 +6,7 @@ y otros usuarios pueden opinar sobre ella. Las recomendaciones salen de usuarios
 
 ## Estado
 MVP funcional en local (backend con tests, app Expo tipada). **Sin desplegar todavía** en el VPS.
+Flujo probado de extremo a extremo en la versión web de la app (registro → buscar → añadir serie → puntuar).
 
 ## Arquitectura
 ```
@@ -40,14 +41,17 @@ npm test                                              # 5 tests con TMDB simulad
 
 # App
 cd app && npm install && npx expo start --ios        # EXPO_PUBLIC_API_URL por defecto http://localhost:3025/api
+# Sin Xcode: npx expo start --web (arranca el servidor con CORS_ORIGIN=http://localhost:8081, o el puerto que uses)
 ```
-Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `PORT` (3025), `DB_PATH` (`data/nextepisode.db`).
+Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `PORT` (3025), `DB_PATH` (`data/nextepisode.db`), `CORS_ORIGIN` (opcional; solo para probar la app web, no hace falta en móvil ni en producción).
 
 ## Limitaciones conocidas / pendiente
 - Sin desplegar: PM2 `nextepisode-api` en el VPS (puerto 3025) + nginx + HTTPS; fijar `EXPO_PUBLIC_API_URL`.
 - Sin watchlist, notificaciones, perfiles sociales ni moderación/“reportar” de reseñas.
 - Búsqueda local por `LIKE` (suficiente para el MVP; FTS5 más adelante).
-- App no probada aún en dispositivo/simulador (solo `tsc` y `expo-doctor`).
+- No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
+- Sin probar la integración real con TMDB (falta la API key): solo con TMDB simulado en los tests.
 
 ## Changelog
+- **0.1.1** — soporte web para pruebas (fallback de almacenamiento) y CORS opcional.
 - **0.1.0** — MVP: auth, catálogo TMDB + alta manual, reseñas, plataformas por país, recomendaciones.

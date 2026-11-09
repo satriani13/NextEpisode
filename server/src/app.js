@@ -12,6 +12,20 @@ export function createApp({ db, tmdb, jwtSecret = process.env.JWT_SECRET }) {
   app.disable('x-powered-by');
   app.use(express.json({ limit: '50kb' }));
 
+  // CORS solo si se configura (p. ej. pruebas con la app web en desarrollo). La app nativa no lo necesita.
+  const corsOrigin = process.env.CORS_ORIGIN;
+  if (corsOrigin) {
+    app.use((req, res, next) => {
+      res.set({
+        'Access-Control-Allow-Origin': corsOrigin,
+        'Access-Control-Allow-Headers': 'content-type, authorization',
+        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      });
+      if (req.method === 'OPTIONS') return res.sendStatus(204);
+      next();
+    });
+  }
+
   const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
   const bad = (res, msg, code = 400) => res.status(code).json({ error: msg });
 

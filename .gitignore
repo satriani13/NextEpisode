@@ -6,3 +6,4 @@ dist/
 server/data/
 .env
 .DS_Store
+app-web/

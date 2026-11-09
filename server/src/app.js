@@ -10,6 +10,8 @@ export function createApp({ db, tmdb, jwtSecret = process.env.JWT_SECRET }) {
   if (!jwtSecret) throw new Error('JWT_SECRET requerido');
   const app = express();
   app.disable('x-powered-by');
+  // Detrás de nginx: el rate-limit debe ver la IP real del cliente (X-Forwarded-For), no 127.0.0.1.
+  if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY));
   app.use(express.json({ limit: '50kb' }));
 
   // CORS solo si se configura (p. ej. pruebas con la app web en desarrollo). La app nativa no lo necesita.

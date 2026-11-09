@@ -63,6 +63,7 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `PORT` (3025
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.2.2** — botón «Salir» (con el usuario activo) en la cabecera de todas las pestañas para cerrar sesión y entrar con otra cuenta.
 - **0.2.1** — versión web publicada y registrada en el Portal de Demos; la API queda solo bajo `/api/` en nginx.
 - **0.2.0** — API desplegada en el VPS (PM2 + nginx + HTTPS), búsqueda también por título original, probado con TMDB real.
 - **0.1.1** — soporte web para pruebas (fallback de almacenamiento) y CORS opcional.

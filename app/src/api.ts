@@ -11,8 +11,13 @@ const store = Platform.OS === 'web'
   : SecureStore;
 
 // Desarrollo: servidor local. Build de producción: VPS. Se puede forzar con EXPO_PUBLIC_API_URL.
+// En la web publicada la ruta es relativa (mismo origen, vale para cualquier dominio del portal).
 export const API_URL = process.env.EXPO_PUBLIC_API_URL
-  ?? (__DEV__ ? 'http://localhost:3025/api' : 'https://jpchost.ddns.net/proyectos/nextepisode/api');
+  ?? (__DEV__
+    ? 'http://localhost:3025/api'
+    : Platform.OS === 'web'
+      ? '/proyectos/nextepisode/api'
+      : 'https://jpchost.ddns.net/proyectos/nextepisode/api');
 const TOKEN_KEY = 'ne_token';
 
 let token: string | null = null;

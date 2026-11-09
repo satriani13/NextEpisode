@@ -16,6 +16,7 @@ export function createTmdb({ apiKey = process.env.TMDB_API_KEY, fetchImpl = fetc
   const mapShow = (r) => ({
     tmdb_id: r.id,
     title: r.name,
+    original_title: r.original_name || null,
     year: r.first_air_date ? Number(r.first_air_date.slice(0, 4)) : null,
     overview: r.overview || '',
     poster_url: r.poster_path ? `${IMG}/w342${r.poster_path}` : null,

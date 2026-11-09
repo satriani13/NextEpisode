@@ -80,7 +80,7 @@ export function createApp({ db, tmdb, jwtSecret = process.env.JWT_SECRET }) {
     const q = String(req.query.q || '').trim();
     if (q.length < 2) return bad(res, 'Escribe al menos 2 caracteres');
     const like = `%${q.replace(/[%_\\]/g, '\\$&')}%`;
-    const local = db.prepare(`${showSelect} WHERE s.title LIKE ? ESCAPE '\\' GROUP BY s.id ORDER BY ratings_count DESC LIMIT 20`).all(like);
+    const local = db.prepare(`${showSelect} WHERE (s.title LIKE ? ESCAPE '\\' OR s.original_title LIKE ? ESCAPE '\\') GROUP BY s.id ORDER BY ratings_count DESC LIMIT 20`).all(like, like);
     const known = new Set(local.map((s) => s.tmdb_id).filter(Boolean));
     let remote = [];
     try {
@@ -98,9 +98,9 @@ export function createApp({ db, tmdb, jwtSecret = process.env.JWT_SECRET }) {
       if (existing) return res.json({ id: existing.id, created: false });
       let d;
       try { d = await tmdb.details(tmdb_id); } catch { return bad(res, 'Serie no encontrada en TMDB', 404); }
-      const r = db.prepare(`INSERT INTO shows (tmdb_id,title,title_key,year,overview,poster_url,genres,source,created_by)
-        VALUES (?,?,?,?,?,?,?,'tmdb',?)`)
-        .run(d.tmdb_id, d.title, titleKey(d.title), d.year, d.overview, d.poster_url, d.genres, req.user.id);
+      const r = db.prepare(`INSERT INTO shows (tmdb_id,title,original_title,title_key,year,overview,poster_url,genres,source,created_by)
+        VALUES (?,?,?,?,?,?,?,?,'tmdb',?)`)
+        .run(d.tmdb_id, d.title, d.original_title, titleKey(d.title), d.year, d.overview, d.poster_url, d.genres, req.user.id);
       return res.status(201).json({ id: Number(r.lastInsertRowid), created: true });
     }
     if (typeof title !== 'string' || title.trim().length < 2 || title.length > 120) return bad(res, 'Título no válido');

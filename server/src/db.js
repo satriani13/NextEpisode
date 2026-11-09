@@ -20,6 +20,7 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
       id INTEGER PRIMARY KEY,
       tmdb_id INTEGER UNIQUE,
       title TEXT NOT NULL,
+      original_title TEXT,
       title_key TEXT NOT NULL,
       year INTEGER,
       overview TEXT,
@@ -50,6 +51,10 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
     );
     CREATE INDEX IF NOT EXISTS idx_reviews_show ON reviews(show_id);
   `);
+  // Migración para BDs creadas antes de existir original_title.
+  if (!db.prepare('PRAGMA table_info(shows)').all().some((c) => c.name === 'original_title')) {
+    db.exec('ALTER TABLE shows ADD COLUMN original_title TEXT');
+  }
   return db;
 }
 

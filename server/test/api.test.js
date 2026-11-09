@@ -7,7 +7,7 @@ process.env.NODE_ENV = 'test';
 
 const fakeTmdb = {
   async search(q) { return [{ tmdb_id: 1, title: 'Dark', year: 2017, overview: '', poster_url: null }]; },
-  async details(id) { if (id !== 1) throw new Error('404'); return { tmdb_id: 1, title: 'Dark', year: 2017, overview: 'x', poster_url: null, genres: 'Drama' }; },
+  async details(id) { if (id !== 1) throw new Error('404'); return { tmdb_id: 1, title: 'Oscuro', original_title: 'Dark', year: 2017, overview: 'x', poster_url: null, genres: 'Drama' }; },
   async providers() { return [{ provider: 'Netflix', logo_url: null }]; },
 };
 
@@ -52,6 +52,8 @@ test('series: búsqueda TMDB, importación y dedupe', async () => {
   const s2 = await call('GET', '/api/shows/search?q=dark', null, t);
   assert.equal(s2.body.catalog.length, 1);
   assert.equal(s2.body.tmdb.length, 0);
+  // Se encuentra por el título original aunque el localizado sea distinto
+  assert.equal((await call('GET', '/api/shows/search?q=dark', null, t)).body.catalog[0].id, add.body.id);
   const d = await call('GET', `/api/shows/${add.body.id}`, null, t);
   assert.equal(d.body.providers[0].provider, 'Netflix');
   close();

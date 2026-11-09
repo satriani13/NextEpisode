@@ -10,8 +10,9 @@ const store = Platform.OS === 'web'
     }
   : SecureStore;
 
-// En desarrollo el simulador de iOS alcanza el servidor local; en producción: EXPO_PUBLIC_API_URL.
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3025/api';
+// Desarrollo: servidor local. Build de producción: VPS. Se puede forzar con EXPO_PUBLIC_API_URL.
+export const API_URL = process.env.EXPO_PUBLIC_API_URL
+  ?? (__DEV__ ? 'http://localhost:3025/api' : 'https://jpchost.ddns.net/proyectos/nextepisode/api');
 const TOKEN_KEY = 'ne_token';
 
 let token: string | null = null;

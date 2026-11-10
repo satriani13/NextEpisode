@@ -3,7 +3,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { MagnifyingGlass, SlidersHorizontal, X } from '../icons';
 import { api, Found, Meta, TmdbShow } from '../api';
 import { useAuth } from '../auth';
-import { FadeUp } from '../motion';
+import { FadeUp, PressScale } from '../motion';
 import { Button, Card, Chip, Empty, ErrorBanner, FeaturedCard, ResultsSkeleton, Screen, ScreenHeader, SectionLabel, ShowCard, T } from '../components/ui';
 import { colors, font, radius, TAB_SPACE, web } from '../theme';
 
@@ -20,6 +20,7 @@ export default function DiscoverScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const [sort, setSort] = useState<'new' | 'popular'>('new');
   const dirty = useRef(false);
 
   // Preferencias guardadas + catálogo de géneros/plataformas.
@@ -48,13 +49,13 @@ export default function DiscoverScreen({ navigation }: any) {
     let alive = true;
     setLoading(true); setError('');
     const h = setTimeout(() => {
-      (term.length >= 2 ? api.search(term, genres) : api.discover(genres, providers))
+      (term.length >= 2 ? api.search(term, genres) : api.discover(genres, providers, sort))
         .then((r) => alive && setRes(r))
         .catch((e) => alive && setError(e.message))
         .finally(() => alive && setLoading(false));
     }, term ? 320 : 120);
     return () => { alive = false; clearTimeout(h); };
-  }, [ready, term, genres, providers, retry]);
+  }, [ready, term, genres, providers, sort, retry]);
 
   const toggle = (list: number[], set: (n: number[]) => void, id: number) => {
     dirty.current = true;
@@ -72,23 +73,28 @@ export default function DiscoverScreen({ navigation }: any) {
     if (!res) return [];
     const inApp = res.catalog.map((s): Card => ({
       key: `c${s.id}`, title: s.title, year: s.year, genres: s.genres, rating: s.avg_rating, count: s.ratings_count,
-      poster: s.poster_url, backdrop: s.backdrop_url, onPress: () => navigation.navigate('Show', { id: s.id }),
+      poster: s.poster_url, backdrop: s.backdrop_url, seasons: s.seasons, onPress: () => navigation.navigate('Show', { id: s.id }),
     }));
+    const showDate = sort === 'new' && term.length < 2; // en Novedades se muestra la fecha de estreno
     const outside = res.tmdb.map((t): Card => ({
       key: `t${t.tmdb_id}`, title: t.title, year: t.year, genres: t.genres, poster: t.poster_url, backdrop: t.backdrop_url,
-      isNew: true, onPress: () => open(t),
+      released: showDate ? t.first_air_date : null,
+      // Si ya está en el catálogo (show_id) se abre directamente y enseña su nota; si no, se importa al abrirla.
+      rating: t.avg_rating, count: t.ratings_count, isNew: !t.show_id,
+      onPress: () => (t.show_id ? navigation.navigate('Show', { id: t.show_id }) : open(t)),
     }));
     return [...inApp, ...outside];
-  }, [res, navigation, open]);
+  }, [res, navigation, open, sort, term]);
 
   const name = (list: number[], src?: { id: number; name: string }[]) => list.map((id) => src?.find((x) => x.id === id)?.name).filter(Boolean) as string[];
   const gNames = name(genres, meta?.genres);
   const pNames = name(providers, meta?.providers);
   const mix = [pNames.join(', '), gNames.join(', ')].filter(Boolean).join(' · ');
-  const heading = term.length >= 2 ? `Resultados para “${term}”` : mix ? 'Para tu mezcla' : 'Lo más visto ahora';
+  const novelty = sort === 'new' && term.length < 2;
+  const heading = term.length >= 2 ? `Resultados para “${term}”` : novelty ? (mix ? 'Novedades para tu mezcla' : 'Últimos estrenos') : mix ? 'Para tu mezcla' : 'Lo más visto ahora';
   const sub = term.length >= 2
     ? (gNames.length ? `Primero lo que encaja con ${gNames.join(', ')}` : 'Elige géneros para que suban los que más te apetecen')
-    : mix || 'Elige plataformas y géneros para afinar';
+    : mix || (novelty ? 'Lo más reciente en streaming en tu país' : 'Elige plataformas y géneros para afinar');
   const hasFilters = genres.length + providers.length > 0;
   const [hero, ...rest] = cards;
   const left = rest.filter((_, i) => i % 2 === 0);
@@ -135,14 +141,25 @@ export default function DiscoverScreen({ navigation }: any) {
           </ChipRow>
         </FadeUp>
 
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }} accessibilityLiveRegion="polite">
+        <View style={{ paddingHorizontal: 20, marginBottom: 14 }} accessibilityLiveRegion="polite">
           <T v="heading" accessibilityRole="header">{heading}</T>
           <T v="small" color={colors.muted} style={{ marginTop: 2 }}>{sub}</T>
         </View>
 
+        {term.length < 2 && (
+          <View style={{ marginHorizontal: 20, marginBottom: 18, flexDirection: 'row', padding: 4, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline }} accessibilityRole="tablist">
+            {([['new', 'Novedades'], ['popular', 'Populares']] as const).map(([k, label]) => (
+              <PressScale key={k} onPress={() => setSort(k)} accessibilityRole="tab" accessibilityState={{ selected: sort === k }} accessibilityLabel={label} containerStyle={{ flex: 1 }} scale={0.97}
+                style={{ minHeight: 44, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: sort === k ? colors.glassHi : 'transparent' }}>
+                <T v="small" color={sort === k ? colors.text : colors.muted} style={{ fontFamily: font.bodySemi }}>{label}</T>
+              </PressScale>
+            ))}
+          </View>
+        )}
+
         {loading ? <ResultsSkeleton /> : error ? <ErrorBanner text={error} onRetry={() => setRetry((r) => r + 1)} /> : cards.length ? (
           <View style={{ paddingHorizontal: 20, gap: 20 }}>
-            <FeaturedCard card={hero} label={hasFilters ? 'Encaja contigo' : 'Lo más visto'} />
+            <FeaturedCard card={hero} label={novelty ? 'Último estreno' : hasFilters ? 'Encaja contigo' : 'Lo más visto'} />
             {rest.length > 0 && (
               <View style={{ flexDirection: 'row', gap: 14 }}>
                 <View style={{ flex: 1, gap: 20 }}>{left.map((c, i) => <FadeUp key={c.key} delay={i * 60}><ShowCard card={c} /></FadeUp>)}</View>

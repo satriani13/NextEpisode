@@ -19,7 +19,7 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 
 ### Modelo de datos (SQLite)
 `users` · `shows` (tmdb_id único opcional, `source` tmdb|user) · `show_providers` (caché 24 h por país) ·
-`reviews` (1–5 estrellas + texto, única por usuario/serie; reeditable) · `user_prefs` (géneros y plataformas elegidos) · `shows.backdrop_url` (imagen ancha para las fichas).
+`reviews` (1–5 estrellas + texto, única por usuario/serie; reeditable) · `user_prefs` (géneros y plataformas elegidos) · `watchlist` (usuario + serie: «Quiero ver») · `shows.backdrop_url` (imagen ancha para las fichas).
 
 ### API (`/api`, todo con `Authorization: Bearer` salvo auth y `/health`)
 | Método | Ruta | Descripción |
@@ -37,10 +37,13 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 | GET | `/shows/:id` | Ficha, media, plataformas del país, tu reseña |
 | GET/POST | `/shows/:id/reviews` | Listar / crear-editar tu reseña |
 | GET | `/me/reviews` | Tus series puntuadas |
+| GET | `/me/watchlist` | Tu lista «Quiero ver» (más reciente primero) |
+| PUT/DELETE | `/me/watchlist/:id` | Guardar / quitar una serie de «Quiero ver». PUT es idempotente; 409 si ya la has puntuado |
 | GET | `/recommendations` | Afinidad entre usuarios (±1 punto en series en común) → series que ellos puntúan ≥4 y tú no has visto; si no hay datos, top global |
 
 ## Interfaz (rediseño 0.4.0)
 - **Formato:** web app con aspecto de móvil. En pantallas anchas se muestra dentro de un marco de móvil centrado; en un móvil o ventana estrecha ocupa toda la pantalla (`src/components/PhoneFrame.tsx`).
+- **Quiero ver:** botón en la ficha de cada serie (cambio instantáneo, se deshace si falla) y pestaña «Quiero ver» en «Mis series» con contador y «Quitar de la lista». La lista es privada y, al puntuar una serie, sale sola de ella (ya la has visto).
 - **Inicio = Explorar:** ya no está en blanco. Sugiere **plataformas** (con logo) y **géneros** como chips multi-selección, recordados por usuario; con ellos descubre series (destacada + rejilla). Si escribes un título, manda el título y los géneros elegidos suben lo que encaja.
 - **Sistema visual:** «cine nocturno» — fondo con tinte (no `#000`), un solo acento (ember `#FF6B3D`), superficies de cristal con doble bisel, Outfit (titulares) + Geist (texto), iconos Phosphor de trazo fino. Tokens en `src/theme.ts`, componentes en `src/components/ui.tsx`.
 - **Movimiento** (`src/motion.tsx`): entradas escalonadas, pulsación con muelle, brillo de carga (*shimmer*) y aurora de fondo; solo `transform`/`opacity`; se desactiva con «reducir movimiento» del sistema.
@@ -84,6 +87,7 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAIL
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.5.0** — lista «Quiero ver» (guardar desde la ficha, pestaña en «Mis series», sale sola al puntuar); 19 tests.
 - **0.4.0** — rediseño completo (marco de móvil, tema oscuro, animaciones), inicio Explorar con sugerencias de géneros y plataformas y búsqueda combinada, preferencias por usuario, imágenes anchas en las fichas, bundle 6× más ligero, 16 tests (5 nuevos de explorar/plataformas/preferencias).
 - **0.3.1** — correo por el puerto 587 (STARTTLS): el VPS bloquea el 465 y el envío fallaba por timeout; timeouts explícitos en el mailer.
 - **0.3.0** — gestión de usuarios para administradores (lista + cambio de contraseña), recuperación de contraseña por correo (código, caducidad, límite de intentos), invalidación de sesiones al cambiar la contraseña, 6 tests nuevos (11 en total).

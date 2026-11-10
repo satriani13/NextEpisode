@@ -1,0 +1,19 @@
+// Iconos Phosphor importados uno a uno: el índice del paquete arrastra miles de iconos (+5 MB al bundle).
+export { ArrowRight } from 'phosphor-react-native/src/icons/ArrowRight';
+export { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
+export { Check } from 'phosphor-react-native/src/icons/Check';
+export { EnvelopeSimple } from 'phosphor-react-native/src/icons/EnvelopeSimple';
+export { Eye } from 'phosphor-react-native/src/icons/Eye';
+export { EyeSlash } from 'phosphor-react-native/src/icons/EyeSlash';
+export { FilmSlate } from 'phosphor-react-native/src/icons/FilmSlate';
+export { Fire } from 'phosphor-react-native/src/icons/Fire';
+export { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
+export { ShieldCheck } from 'phosphor-react-native/src/icons/ShieldCheck';
+export { SignOut } from 'phosphor-react-native/src/icons/SignOut';
+export { SlidersHorizontal } from 'phosphor-react-native/src/icons/SlidersHorizontal';
+export { Sparkle } from 'phosphor-react-native/src/icons/Sparkle';
+export { Star } from 'phosphor-react-native/src/icons/Star';
+export { TelevisionSimple } from 'phosphor-react-native/src/icons/TelevisionSimple';
+export { UsersThree } from 'phosphor-react-native/src/icons/UsersThree';
+export { WarningCircle } from 'phosphor-react-native/src/icons/WarningCircle';
+export { X } from 'phosphor-react-native/src/icons/X';

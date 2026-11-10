@@ -34,6 +34,10 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
       overview TEXT,
       poster_url TEXT,
       backdrop_url TEXT,
+      seasons INTEGER,
+      episodes INTEGER,
+      status TEXT,
+      details_at TEXT,
       genres TEXT NOT NULL DEFAULT '',
       source TEXT NOT NULL CHECK (source IN ('tmdb','user')),
       created_by INTEGER REFERENCES users(id),
@@ -80,6 +84,9 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
   }
   if (!db.prepare('PRAGMA table_info(shows)').all().some((c) => c.name === 'backdrop_url')) {
     db.exec('ALTER TABLE shows ADD COLUMN backdrop_url TEXT');
+  }
+  for (const col of ['seasons INTEGER', 'episodes INTEGER', 'status TEXT', 'details_at TEXT']) {
+    if (!db.prepare('PRAGMA table_info(shows)').all().some((c) => c.name === col.split(' ')[0])) db.exec(`ALTER TABLE shows ADD COLUMN ${col}`);
   }
   return db;
 }

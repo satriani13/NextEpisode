@@ -63,7 +63,7 @@ npm test                                              # 5 tests con TMDB simulad
 cd app && npm install && npx expo start --ios        # en desarrollo usa http://localhost:3025/api; en build de producción, la URL del VPS (o EXPO_PUBLIC_API_URL)
 # Sin Xcode: npx expo start --web (arranca el servidor con CORS_ORIGIN=http://localhost:8081, o el puerto que uses)
 ```
-Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAILS` (emails separados por comas; quien se registre con uno de ellos es administrador; no hay forma de ascender desde la app), `SMTP_USER` + `SMTP_PASS` (+ `SMTP_HOST`=smtp.gmail.com, `SMTP_PORT`=465, `MAIL_FROM`) para el correo de recuperación (Gmail con *contraseña de aplicación*; sin ellos no se envía nada y en desarrollo el código sale por consola), `PORT` (3025), `DB_PATH` (`data/nextepisode.db`), `CORS_ORIGIN` (opcional; solo para probar la app web, no hace falta en móvil ni en producción).
+Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAILS` (emails separados por comas; quien se registre con uno de ellos es administrador; no hay forma de ascender desde la app), `SMTP_USER` + `SMTP_PASS` (+ `SMTP_HOST`=smtp.gmail.com, `SMTP_PORT`=587 con STARTTLS (el VPS bloquea los puertos de salida 25 y 465), `MAIL_FROM`) para el correo de recuperación (Gmail con *contraseña de aplicación*; sin ellos no se envía nada y en desarrollo el código sale por consola), `PORT` (3025), `DB_PATH` (`data/nextepisode.db`), `CORS_ORIGIN` (opcional; solo para probar la app web, no hace falta en móvil ni en producción).
 
 ## Limitaciones conocidas / pendiente
 - App sin publicar (TestFlight/Play Store); la API pública no tiene aún copias de seguridad automáticas de la BD.
@@ -72,6 +72,7 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAIL
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.3.1** — correo por el puerto 587 (STARTTLS): el VPS bloquea el 465 y el envío fallaba por timeout; timeouts explícitos en el mailer.
 - **0.3.0** — gestión de usuarios para administradores (lista + cambio de contraseña), recuperación de contraseña por correo (código, caducidad, límite de intentos), invalidación de sesiones al cambiar la contraseña, 6 tests nuevos (11 en total).
 - **0.2.2** — botón «Salir» (con el usuario activo) en la cabecera de todas las pestañas para cerrar sesión y entrar con otra cuenta.
 - **0.2.1** — versión web publicada y registrada en el Portal de Demos; la API queda solo bajo `/api/` en nginx.

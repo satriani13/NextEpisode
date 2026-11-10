@@ -62,9 +62,10 @@ export type Meta = { country: string; genres: Genre[]; providers: ProviderOpt[] 
 export type Prefs = { genres: number[]; providers: number[] };
 export type Found = { catalog: Show[]; tmdb: TmdbShow[] };
 export type Provider = { provider: string; logo_url: string | null };
-export type ShowDetail = Show & { providers: Provider[]; country: string; my_review: { rating: number; body: string } | null };
+export type ShowDetail = Show & { providers: Provider[]; country: string; my_review: { rating: number; body: string } | null; in_watchlist: boolean };
 export type Review = { id: number; rating: number; body: string; updated_at: string; username: string };
 export type MyReview = { show_id: number; title: string; year: number | null; poster_url: string | null; rating: number; body: string };
+export type WatchItem = { show_id: number; title: string; year: number | null; poster_url: string | null; genres: string; added_at: string; avg_rating: number | null };
 export type AuthResult = { token: string; user: { id: number; username: string; country: string; admin: boolean } };
 export type AdminUser = { id: number; email: string; username: string; country: string; created_at: string; reviews_count: number; admin: boolean };
 
@@ -85,6 +86,9 @@ export const api = {
   show: (id: number) => request<ShowDetail>('GET', `/shows/${id}`),
   reviews: (id: number) => request<Review[]>('GET', `/shows/${id}/reviews`),
   rate: (id: number, rating: number, body: string) => request<{ ok: true }>('POST', `/shows/${id}/reviews`, { rating, body }),
+  watchlist: () => request<WatchItem[]>('GET', '/me/watchlist'),
+  addWatch: (id: number) => request<{ ok: true }>('PUT', `/me/watchlist/${id}`),
+  removeWatch: (id: number) => request<{ ok: true }>('DELETE', `/me/watchlist/${id}`),
   myReviews: () => request<MyReview[]>('GET', '/me/reviews'),
   recommendations: () => request<{ kind: 'personalized' | 'top'; shows: Show[] }>('GET', '/recommendations'),
 };

@@ -4,13 +4,17 @@ import nodemailer from 'nodemailer';
 // en desarrollo el código se imprime en consola para poder probar el flujo.
 export function createMailer({
   host = process.env.SMTP_HOST || 'smtp.gmail.com',
-  port = Number(process.env.SMTP_PORT || 465),
+  // 587 + STARTTLS: el VPS (Hetzner) bloquea los puertos de salida 25 y 465.
+  port = Number(process.env.SMTP_PORT || 587),
   user = process.env.SMTP_USER,
   pass = process.env.SMTP_PASS,
   from = process.env.MAIL_FROM || process.env.SMTP_USER,
 } = {}) {
   const enabled = Boolean(user && pass);
-  const transport = enabled ? nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } }) : null;
+  const transport = enabled ? nodemailer.createTransport({
+    host, port, secure: port === 465, requireTLS: port !== 465, auth: { user, pass },
+    connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 20000,
+  }) : null;
   return {
     enabled,
     async sendResetCode({ to, username, code }) {

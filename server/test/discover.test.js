@@ -77,7 +77,7 @@ test('discover: filtra por género y pasa plataformas y país a TMDB', async () 
   assert.equal(d.status, 200);
   assert.deepEqual(d.body.tmdb.map((s) => s.title), ['Ted Lasso']);
   const last = calls.filter((c) => c[0] === 'discover').at(-1)[1];
-  assert.deepEqual(last, { genres: [35], providers: [8, 119], country: 'ES' });
+  assert.deepEqual(last, { genres: [35], providers: [8, 119], country: 'ES', sort: 'popular' });
   assert.equal((await call('GET', '/api/discover?genres=abc,35;drop', null, token)).status, 200); // basura ignorada
   close();
 });

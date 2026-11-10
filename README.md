@@ -24,13 +24,22 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 ### API (`/api`, todo con `Authorization: Bearer` salvo auth y `/health`)
 | Método | Ruta | Descripción |
 |---|---|---|
-| POST | `/auth/register`, `/auth/login` | Cuenta y sesión (JWT 30 d, rate-limit) |
+| POST | `/auth/register`, `/auth/login` | Cuenta y sesión (JWT 30 d, rate-limit). La respuesta incluye `user.admin` |
+| POST | `/auth/forgot` `{email}` | Envía por correo un código de recuperación (8 caracteres, 1 h, 1 activo por usuario, cooldown 60 s). Respuesta idéntica exista o no el email |
+| POST | `/auth/reset` `{email, code, password}` | Cambia la contraseña con el código (máx. 5 intentos, un solo uso) |
+| GET | `/admin/users` | **Solo admin.** Lista usuarios (email, país, nº de opiniones, alta). Nunca devuelve hashes |
+| POST | `/admin/users/:id/password` `{password}` | **Solo admin.** Fija una contraseña nueva; cierra las sesiones abiertas de ese usuario |
 | GET | `/shows/search?q=` | Catálogo local + resultados TMDB aún no importados |
 | POST | `/shows` | Importa de TMDB (`tmdb_id`) o crea manualmente (`title`, `year`…) |
 | GET | `/shows/:id` | Ficha, media, plataformas del país, tu reseña |
 | GET/POST | `/shows/:id/reviews` | Listar / crear-editar tu reseña |
 | GET | `/me/reviews` | Tus series puntuadas |
 | GET | `/recommendations` | Afinidad entre usuarios (±1 punto en series en común) → series que ellos puntúan ≥4 y tú no has visto; si no hay datos, top global |
+
+## Usuarios, administración y recuperación de contraseña
+- **Administrador** = email incluido en `ADMIN_EMAILS` (se comprueba en el servidor en cada petición). Ve la pestaña **Usuarios**: lista y cambio de contraseña. Las contraseñas están cifradas con bcrypt: **no se pueden ver**, solo fijar una nueva.
+- **Sesiones:** cada usuario tiene `token_version`; al cambiarse su contraseña (por el admin o por recuperación) sus tokens anteriores dejan de valer.
+- **Recuperar contraseña:** «¿Has olvidado tu contraseña?» en el login → código por correo → código + contraseña nueva. Solo se guarda el hash SHA-256 del código.
 
 ## Despliegue (VPS)
 - Código en `/var/www/proyectos-src/nextepisode/` (clon HTTPS del repo público). PM2 `nextepisode-api`, **puerto 3025**, solo `127.0.0.1`,
@@ -54,7 +63,7 @@ npm test                                              # 5 tests con TMDB simulad
 cd app && npm install && npx expo start --ios        # en desarrollo usa http://localhost:3025/api; en build de producción, la URL del VPS (o EXPO_PUBLIC_API_URL)
 # Sin Xcode: npx expo start --web (arranca el servidor con CORS_ORIGIN=http://localhost:8081, o el puerto que uses)
 ```
-Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `PORT` (3025), `DB_PATH` (`data/nextepisode.db`), `CORS_ORIGIN` (opcional; solo para probar la app web, no hace falta en móvil ni en producción).
+Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAILS` (emails separados por comas; quien se registre con uno de ellos es administrador; no hay forma de ascender desde la app), `SMTP_USER` + `SMTP_PASS` (+ `SMTP_HOST`=smtp.gmail.com, `SMTP_PORT`=465, `MAIL_FROM`) para el correo de recuperación (Gmail con *contraseña de aplicación*; sin ellos no se envía nada y en desarrollo el código sale por consola), `PORT` (3025), `DB_PATH` (`data/nextepisode.db`), `CORS_ORIGIN` (opcional; solo para probar la app web, no hace falta en móvil ni en producción).
 
 ## Limitaciones conocidas / pendiente
 - App sin publicar (TestFlight/Play Store); la API pública no tiene aún copias de seguridad automáticas de la BD.
@@ -63,6 +72,7 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `PORT` (3025
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.3.0** — gestión de usuarios para administradores (lista + cambio de contraseña), recuperación de contraseña por correo (código, caducidad, límite de intentos), invalidación de sesiones al cambiar la contraseña, 6 tests nuevos (11 en total).
 - **0.2.2** — botón «Salir» (con el usuario activo) en la cabecera de todas las pestañas para cerrar sesión y entrar con otra cuenta.
 - **0.2.1** — versión web publicada y registrada en el Portal de Demos; la API queda solo bajo `/api/` en nginx.
 - **0.2.0** — API desplegada en el VPS (PM2 + nginx + HTTPS), búsqueda también por título original, probado con TMDB real.

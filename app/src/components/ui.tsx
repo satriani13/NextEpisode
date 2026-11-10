@@ -144,11 +144,16 @@ export function Poster({ uri, title, style }: { uri?: string | null; title: stri
 /* ───────── Tarjetas de serie ───────── */
 export type Card = {
   key: string; title: string; year?: number | null; genres?: string; rating?: number | null; count?: number;
-  poster?: string | null; backdrop?: string | null; isNew?: boolean; onPress: () => void;
+  poster?: string | null; backdrop?: string | null; isNew?: boolean; seasons?: number | null; released?: string | null; onPress: () => void;
 };
-const meta = (c: Card) => [c.year, c.genres?.split(',').slice(0, 2).join(' · ').trim()].filter(Boolean).join(' · ');
+const fmtDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '');
+const meta = (c: Card) => [
+  c.released ? `Estreno ${fmtDate(c.released)}` : c.year,
+  c.seasons ? `${c.seasons} temp.` : null,
+  c.genres?.split(',').slice(0, 2).join(' · ').trim(),
+].filter(Boolean).join(' · ');
 
-export function FeaturedCard({ card, label = 'Destacada' }: { card: Card; label?: string }) {
+export function FeaturedCard({ card, label }: { card: Card; label?: string }) {
   return (
     <PressScale onPress={card.onPress} accessibilityRole="button" accessibilityLabel={`${card.title}. ${meta(card)}`} scale={0.98} style={[s.featShell, web({ boxShadow: '0 30px 60px -30px rgba(255,107,61,0.30)' })]}>
       <View style={s.featCore}>
@@ -156,7 +161,7 @@ export function FeaturedCard({ card, label = 'Destacada' }: { card: Card; label?
         <LinearGradient colors={['rgba(11,11,16,0.05)', 'rgba(11,11,16,0.55)', 'rgba(11,11,16,0.96)']} locations={[0.1, 0.55, 1]} style={StyleSheet.absoluteFill} />
         <View style={s.featBody}>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-            <View style={s.tag}><T v="eyebrow" color={colors.accent} style={{ fontSize: 11 }}>{card.isNew ? 'Nueva en la app' : label}</T></View>
+            <View style={s.tag}><T v="eyebrow" color={colors.accent} style={{ fontSize: 11 }}>{label ?? (card.isNew ? 'Nueva en la app' : 'Destacada')}</T></View>
             <RatingBadge value={card.rating ?? null} count={card.count} />
           </View>
           <T v="title" numberOfLines={2}>{card.title}</T>

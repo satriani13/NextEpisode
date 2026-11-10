@@ -20,7 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // El payload del JWT lleva id/username/country; lo leemos sin verificar (el servidor valida en cada llamada).
         try {
           const p = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-          if (p.exp * 1000 > Date.now()) setUser({ id: p.id, username: p.username, country: p.country });
+          if (p.exp * 1000 > Date.now()) setUser({ id: p.id, username: p.username, country: p.country, admin: Boolean(p.admin) });
         } catch { /* token ilegible: pedimos login */ }
       }
       setReady(true);

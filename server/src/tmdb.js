@@ -40,6 +40,11 @@ export function createTmdb({ apiKey = process.env.TMDB_API_KEY, fetchImpl = fetc
     overview: r.overview || '',
     poster_url: r.poster_path ? `${IMG}/w342${r.poster_path}` : null,
     backdrop_url: r.backdrop_path ? `${IMG}/w780${r.backdrop_path}` : null,
+    first_air_date: r.first_air_date || null,
+    // Solo vienen en la ficha (/tv/:id), no en búsqueda ni discover.
+    seasons: r.number_of_seasons > 0 ? r.number_of_seasons : null,
+    episodes: r.number_of_episodes > 0 ? r.number_of_episodes : null,
+    status: r.status || null,
     genre_ids: r.genre_ids || (r.genres || []).map((g) => g.id),
     genres: genreText(r.genre_ids || (r.genres || []).map((g) => g.id)) || (r.genres || []).map((g) => g.name).join(', '),
   });
@@ -54,9 +59,15 @@ export function createTmdb({ apiKey = process.env.TMDB_API_KEY, fetchImpl = fetc
       return mapShow(await get(`/tv/${tmdbId}`));
     },
     // Descubrir por género(s) y plataforma(s): varios géneros/plataformas = "o" (separados por |).
-    async discover({ genres = [], providers = [], country = 'ES' } = {}) {
+    // `sort`: 'new' = estrenos más recientes de lo que se puede ver en streaming en el país; 'popular' = más populares.
+    async discover({ genres = [], providers = [], country = 'ES', sort = 'popular' } = {}) {
       if (!enabled) return [];
-      const params = { sort_by: 'popularity.desc', 'vote_count.gte': 50 };
+      const params = sort === 'new'
+        ? {
+          sort_by: 'first_air_date.desc', 'first_air_date.lte': new Date().toISOString().slice(0, 10),
+          'vote_count.gte': 5, watch_region: country, with_watch_monetization_types: 'flatrate', // ≥5 votos: sin series fantasma
+        }
+        : { sort_by: 'popularity.desc', 'vote_count.gte': 50 };
       if (genres.length) params.with_genres = genres.join('|');
       if (providers.length) {
         params.with_watch_providers = providers.join('|');

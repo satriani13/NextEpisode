@@ -19,7 +19,7 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 
 ### Modelo de datos (SQLite)
 `users` · `shows` (tmdb_id único opcional, `source` tmdb|user) · `show_providers` (caché 24 h por país) ·
-`reviews` (1–5 estrellas + texto, única por usuario/serie; reeditable).
+`reviews` (1–5 estrellas + texto, única por usuario/serie; reeditable) · `user_prefs` (géneros y plataformas elegidos) · `shows.backdrop_url` (imagen ancha para las fichas).
 
 ### API (`/api`, todo con `Authorization: Bearer` salvo auth y `/health`)
 | Método | Ruta | Descripción |
@@ -29,12 +29,23 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 | POST | `/auth/reset` `{email, code, password}` | Cambia la contraseña con el código (máx. 5 intentos, un solo uso) |
 | GET | `/admin/users` | **Solo admin.** Lista usuarios (email, país, nº de opiniones, alta). Nunca devuelve hashes |
 | POST | `/admin/users/:id/password` `{password}` | **Solo admin.** Fija una contraseña nueva; cierra las sesiones abiertas de ese usuario |
-| GET | `/shows/search?q=` | Catálogo local + resultados TMDB aún no importados |
+| GET | `/shows/search?q=&genres=` | Catálogo local + resultados TMDB aún no importados. Con `genres` (ids separados por comas) suben los que encajan; nada se filtra |
+| GET | `/meta` | Géneros que ofrece la app y plataformas principales del país del usuario (logos de TMDB; caché 24 h) |
+| GET | `/discover?genres=&providers=` | Explorar sin texto: por género(s) y/o plataforma(s) (varios = «o»). Con plataformas manda TMDB (sabe dónde está cada serie); lo ya importado sale como `catalog` con su nota |
+| GET/PUT | `/me/prefs` | Géneros y plataformas favoritos del usuario (se recuerdan entre sesiones y dispositivos) |
 | POST | `/shows` | Importa de TMDB (`tmdb_id`) o crea manualmente (`title`, `year`…) |
 | GET | `/shows/:id` | Ficha, media, plataformas del país, tu reseña |
 | GET/POST | `/shows/:id/reviews` | Listar / crear-editar tu reseña |
 | GET | `/me/reviews` | Tus series puntuadas |
 | GET | `/recommendations` | Afinidad entre usuarios (±1 punto en series en común) → series que ellos puntúan ≥4 y tú no has visto; si no hay datos, top global |
+
+## Interfaz (rediseño 0.4.0)
+- **Formato:** web app con aspecto de móvil. En pantallas anchas se muestra dentro de un marco de móvil centrado; en un móvil o ventana estrecha ocupa toda la pantalla (`src/components/PhoneFrame.tsx`).
+- **Inicio = Explorar:** ya no está en blanco. Sugiere **plataformas** (con logo) y **géneros** como chips multi-selección, recordados por usuario; con ellos descubre series (destacada + rejilla). Si escribes un título, manda el título y los géneros elegidos suben lo que encaja.
+- **Sistema visual:** «cine nocturno» — fondo con tinte (no `#000`), un solo acento (ember `#FF6B3D`), superficies de cristal con doble bisel, Outfit (titulares) + Geist (texto), iconos Phosphor de trazo fino. Tokens en `src/theme.ts`, componentes en `src/components/ui.tsx`.
+- **Movimiento** (`src/motion.tsx`): entradas escalonadas, pulsación con muelle, brillo de carga (*shimmer*) y aurora de fondo; solo `transform`/`opacity`; se desactiva con «reducir movimiento» del sistema.
+- **Accesibilidad:** contrastes AA comprobados (texto 6,2–18:1), objetivos táctiles ≥44 px, etiquetas en todos los controles, foco de teclado visible solo al usar teclado, zoom permitido.
+- **Rendimiento:** iconos importados uno a uno (`src/icons.ts`) y fuentes por peso: el bundle JS pasó de 6,5 MB a ~1 MB (271 KB comprimido).
 
 ## Usuarios, administración y recuperación de contraseña
 - **Administrador** = email incluido en `ADMIN_EMAILS` (se comprueba en el servidor en cada petición). Ve la pestaña **Usuarios**: lista y cambio de contraseña. Las contraseñas están cifradas con bcrypt: **no se pueden ver**, solo fijar una nueva.
@@ -69,9 +80,11 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAIL
 - App sin publicar (TestFlight/Play Store); la API pública no tiene aún copias de seguridad automáticas de la BD.
 - Sin watchlist, notificaciones, perfiles sociales ni moderación/“reportar” de reseñas.
 - Búsqueda local por `LIKE` (suficiente para el MVP; FTS5 más adelante).
+- Al buscar por título, las plataformas elegidas no filtran (TMDB no las admite en `search`); solo los géneros reordenan. Las series añadidas a mano no tienen plataformas.
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.4.0** — rediseño completo (marco de móvil, tema oscuro, animaciones), inicio Explorar con sugerencias de géneros y plataformas y búsqueda combinada, preferencias por usuario, imágenes anchas en las fichas, bundle 6× más ligero, 16 tests (5 nuevos de explorar/plataformas/preferencias).
 - **0.3.1** — correo por el puerto 587 (STARTTLS): el VPS bloquea el 465 y el envío fallaba por timeout; timeouts explícitos en el mailer.
 - **0.3.0** — gestión de usuarios para administradores (lista + cambio de contraseña), recuperación de contraseña por correo (código, caducidad, límite de intentos), invalidación de sesiones al cambiar la contraseña, 6 tests nuevos (11 en total).
 - **0.2.2** — botón «Salir» (con el usuario activo) en la cabecera de todas las pestañas para cerrar sesión y entrar con otra cuenta.

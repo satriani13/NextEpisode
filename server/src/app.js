@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { titleKey } from './db.js';
+import { GENRES } from './tmdb.js';
 
 const PROVIDER_TTL_HOURS = 24;
 
@@ -27,7 +28,7 @@ export function createApp({
       res.set({
         'Access-Control-Allow-Origin': corsOrigin,
         'Access-Control-Allow-Headers': 'content-type, authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
       });
       if (req.method === 'OPTIONS') return res.sendStatus(204);
       next();
@@ -59,6 +60,10 @@ export function createApp({
   const sign = (u) => jwt.sign(
     { id: u.id, username: u.username, country: u.country, admin: isAdmin(u.email), tv: u.token_version ?? 0 },
     jwtSecret, { expiresIn: '30d' });
+
+  const ids = (v) => String(v || '').split(',').filter(Boolean).map(Number).filter(Number.isInteger).slice(0, 12);
+  const genrePatterns = (gids) => GENRES.filter((g) => gids.includes(g.id)).flatMap((g) => g.match);
+  const matchesGenre = (text, pats) => pats.some((p) => String(text || '').includes(p));
 
   const showSelect = `
     SELECT s.*, ROUND(AVG(r.rating), 2) AS avg_rating, COUNT(r.id) AS ratings_count
@@ -174,7 +179,68 @@ export function createApp({
     } catch {
       // TMDB caído: seguimos con el catálogo local.
     }
+    // Con géneros elegidos, los que coinciden salen primero (el título sigue mandando: nada se filtra).
+    const gids = ids(req.query.genres);
+    if (gids.length) {
+      const pats = genrePatterns(gids);
+      local.sort((a, b) => matchesGenre(b.genres, pats) - matchesGenre(a.genres, pats));
+      remote.sort((a, b) => Number(b.genre_ids?.some((g) => gids.includes(g))) - Number(a.genre_ids?.some((g) => gids.includes(g))));
+    }
     res.json({ catalog: local, tmdb: remote });
+  }));
+
+  // ---- Explorar: géneros, plataformas y descubrimiento ----
+  const metaCache = new Map(); // país -> { at, providers }
+  app.get('/api/meta', auth, wrap(async (req, res) => {
+    const country = String(req.query.country || req.user.country).toUpperCase();
+    let hit = metaCache.get(country);
+    if (!hit || now() - hit.at > 24 * 3600 * 1000) {
+      let providers = [];
+      try { providers = (await tmdb.providerList?.(country)) || []; } catch { /* TMDB caído: sin plataformas */ }
+      hit = { at: now(), providers };
+      if (providers.length) metaCache.set(country, hit);
+    }
+    res.json({ country, genres: GENRES.map(({ id, name }) => ({ id, name })), providers: hit.providers });
+  }));
+
+  const readPrefs = (userId) => {
+    const r = db.prepare('SELECT genres, providers FROM user_prefs WHERE user_id = ?').get(userId);
+    return { genres: JSON.parse(r?.genres || '[]'), providers: JSON.parse(r?.providers || '[]') };
+  };
+  app.get('/api/me/prefs', auth, (req, res) => res.json(readPrefs(req.user.id)));
+  app.put('/api/me/prefs', auth, (req, res) => {
+    const { genres, providers } = req.body || {};
+    const ok = (v) => Array.isArray(v) && v.length <= 30 && v.every((n) => Number.isInteger(n) && n > 0);
+    if (!ok(genres) || !ok(providers)) return bad(res, 'Preferencias no válidas');
+    db.prepare(`INSERT INTO user_prefs (user_id, genres, providers) VALUES (?,?,?)
+      ON CONFLICT(user_id) DO UPDATE SET genres=excluded.genres, providers=excluded.providers`)
+      .run(req.user.id, JSON.stringify(genres), JSON.stringify(providers));
+    res.json({ ok: true });
+  });
+
+  // Descubrir por géneros y/o plataformas. Con plataformas manda TMDB (sabe dónde está cada serie);
+  // las que ya están en nuestro catálogo salen como "catalog" con su nota de la comunidad.
+  app.get('/api/discover', auth, wrap(async (req, res) => {
+    const gids = ids(req.query.genres);
+    const pids = ids(req.query.providers);
+    const country = String(req.query.country || req.user.country).toUpperCase();
+    let found = [];
+    try { found = (await tmdb.discover?.({ genres: gids, providers: pids, country })) || []; } catch { /* sin TMDB: solo catálogo propio */ }
+    const known = found.length
+      ? db.prepare(`${showSelect} WHERE s.tmdb_id IN (${found.map(() => '?').join(',')}) GROUP BY s.id`).all(...found.map((f) => f.tmdb_id))
+      : [];
+    const byTmdb = new Map(known.map((k) => [k.tmdb_id, k]));
+    let catalog;
+    if (pids.length) {
+      catalog = found.map((f) => byTmdb.get(f.tmdb_id)).filter(Boolean);
+    } else {
+      const pats = genrePatterns(gids);
+      catalog = pats.length
+        ? db.prepare(`${showSelect} WHERE ${pats.map(() => 's.genres LIKE ?').join(' OR ')} GROUP BY s.id ORDER BY ratings_count DESC, avg_rating DESC LIMIT 20`).all(...pats.map((p) => `%${p}%`))
+        : db.prepare(`${showSelect} GROUP BY s.id HAVING ratings_count > 0 ORDER BY avg_rating DESC, ratings_count DESC LIMIT 10`).all();
+    }
+    const inCatalog = new Set(catalog.map((c) => c.tmdb_id).filter(Boolean));
+    res.json({ catalog, tmdb: found.filter((f) => !inCatalog.has(f.tmdb_id)) });
   }));
 
   app.post('/api/shows', auth, wrap(async (req, res) => {
@@ -184,9 +250,9 @@ export function createApp({
       if (existing) return res.json({ id: existing.id, created: false });
       let d;
       try { d = await tmdb.details(tmdb_id); } catch { return bad(res, 'Serie no encontrada en TMDB', 404); }
-      const r = db.prepare(`INSERT INTO shows (tmdb_id,title,original_title,title_key,year,overview,poster_url,genres,source,created_by)
-        VALUES (?,?,?,?,?,?,?,?,'tmdb',?)`)
-        .run(d.tmdb_id, d.title, d.original_title, titleKey(d.title), d.year, d.overview, d.poster_url, d.genres, req.user.id);
+      const r = db.prepare(`INSERT INTO shows (tmdb_id,title,original_title,title_key,year,overview,poster_url,backdrop_url,genres,source,created_by)
+        VALUES (?,?,?,?,?,?,?,?,?,'tmdb',?)`)
+        .run(d.tmdb_id, d.title, d.original_title, titleKey(d.title), d.year, d.overview, d.poster_url ?? null, d.backdrop_url ?? null, d.genres, req.user.id);
       return res.status(201).json({ id: Number(r.lastInsertRowid), created: true });
     }
     if (typeof title !== 'string' || title.trim().length < 2 || title.length > 120) return bad(res, 'Título no válido');

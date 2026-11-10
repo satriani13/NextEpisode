@@ -8,6 +8,7 @@ import { colors } from '../theme';
 export default function AddShowScreen({ route, navigation }: any) {
   const [title, setTitle] = useState<string>(route.params?.title ?? '');
   const [year, setYear] = useState('');
+  const [seasons, setSeasons] = useState('');
   const [genreIds, setGenreIds] = useState<number[]>([]);
   const [all, setAll] = useState<Genre[]>([]);
   const [overview, setOverview] = useState('');
@@ -20,7 +21,7 @@ export default function AddShowScreen({ route, navigation }: any) {
     setBusy(true); setError('');
     try {
       const genres = all.filter((g) => genreIds.includes(g.id)).map((g) => g.name).join(', ');
-      const { id } = await api.addShow({ title, year: year ? Number(year) : null, genres, overview });
+      const { id } = await api.addShow({ title, year: year ? Number(year) : null, genres, overview, seasons: seasons ? Number(seasons) : undefined });
       navigation.replace('Show', { id });
     } catch (e: any) { setError(e.message); setBusy(false); }
   }
@@ -39,6 +40,7 @@ export default function AddShowScreen({ route, navigation }: any) {
           <GlassCard>
             <Field label="Título" value={title} onChangeText={setTitle} />
             <Field label="Año de estreno" value={year} onChangeText={setYear} keyboardType="number-pad" inputMode="numeric" maxLength={4} />
+            <Field label="Temporadas (opcional)" value={seasons} onChangeText={setSeasons} keyboardType="number-pad" inputMode="numeric" maxLength={3} />
             <T v="small" color={colors.textDim} style={{ marginBottom: 8 }}>Géneros (hasta 3)</T>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
               {all.map((g) => <Chip key={g.id} label={g.name} selected={genreIds.includes(g.id)} onPress={() => toggle(g.id)} />)}

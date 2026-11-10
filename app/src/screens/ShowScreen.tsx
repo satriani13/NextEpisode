@@ -1,18 +1,25 @@
 import React, { useCallback, useState } from 'react';
-import { Image, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Check, TelevisionSimple } from '../icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, Review, ShowDetail } from '../api';
-import { Button, Loading, Stars, s } from '../components/ui';
-import { colors } from '../theme';
+import { FadeUp, PressScale, Skeleton } from '../motion';
+import { BackButton, Button, ErrorBanner, Field, GlassCard, Poster, Screen, SectionLabel, Stars, T } from '../components/ui';
+import { colors, font, radius } from '../theme';
 
-export default function ShowScreen({ route }: any) {
+export default function ShowScreen({ route, navigation }: any) {
   const { id } = route.params;
+  const insets = useSafeAreaInsets();
   const [show, setShow] = useState<ShowDetail | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [rating, setRating] = useState(0);
   const [body, setBody] = useState('');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [more, setMore] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -24,59 +31,114 @@ export default function ShowScreen({ route }: any) {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   async function save() {
-    setError(''); setSaved(false);
+    setError(''); setSaved(false); setSaving(true);
     try { await api.rate(id, rating, body); setSaved(true); await load(); }
-    catch (e: any) { setError(e.message); }
+    catch (e: any) { setError(e.message); } finally { setSaving(false); }
   }
 
-  if (!show) return error ? <Text style={[s.error, s.pad]}>{error}</Text> : <Loading />;
+  if (!show) {
+    return (
+      <Screen aurora={false}>
+        <View style={{ position: 'absolute', top: insets.top + 16, left: 16, zIndex: 5 }}><BackButton onPress={() => navigation.goBack()} /></View>
+        {error ? <View style={{ marginTop: insets.top + 90 }}><ErrorBanner text={error} onRetry={load} /></View> : <Skeleton style={{ height: 340 }} />}
+      </Screen>
+    );
+  }
+
+  const meta = [show.year, show.genres].filter(Boolean).join(' · ');
+  // Sin variantes "con anuncios" como si fueran otra plataforma (salvo que sea lo único que hay).
+  const clean = show.providers.filter((p) => !/with ads|standard/i.test(p.provider));
+  const provs = clean.length ? clean : show.providers;
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
-      <View style={{ flexDirection: 'row', gap: 14 }}>
-        {show.poster_url ? <Image source={{ uri: show.poster_url }} style={{ width: 110, height: 165, borderRadius: 8 }} /> : null}
-        <View style={{ flex: 1 }}>
-          <Text style={s.h1}>{show.title}</Text>
-          <Text style={s.muted}>{[show.year, show.genres].filter(Boolean).join(' · ')}</Text>
-          <View style={{ marginTop: 8 }}>
-            <Stars value={show.avg_rating ?? 0} size={20} />
-            <Text style={s.muted}>{show.ratings_count ? `${show.avg_rating} · ${show.ratings_count} opiniones` : 'Sé el primero en opinar'}</Text>
-          </View>
+    <Screen aurora={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 48 }}>
+        <View style={{ height: 360 }}>
+          <Poster uri={show.backdrop_url || show.poster_url} title={show.title} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={['rgba(11,11,16,0.55)', 'rgba(11,11,16,0.15)', colors.bg]} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+          <View style={{ position: 'absolute', top: insets.top + 16, left: 16 }}><BackButton onPress={() => navigation.goBack()} /></View>
+          <FadeUp style={{ position: 'absolute', left: 20, right: 20, bottom: 8 }}>
+            <T v="display" numberOfLines={3} accessibilityRole="header">{show.title}</T>
+            {meta ? <T v="small" color={colors.textDim} style={{ marginTop: 6 }}>{meta}</T> : null}
+          </FadeUp>
         </View>
-      </View>
 
-      <Text style={[s.title, { marginTop: 20 }]}>Dónde verla ({show.country})</Text>
-      {show.providers.length ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-          {show.providers.map((p) => (
-            <View key={p.provider} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.card, padding: 6, paddingRight: 10, borderRadius: 8 }}>
-              {p.logo_url ? <Image source={{ uri: p.logo_url }} style={{ width: 24, height: 24, borderRadius: 5 }} /> : null}
-              <Text style={{ color: colors.text }}>{p.provider}</Text>
+        <FadeUp delay={80} style={{ paddingHorizontal: 20, marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <T v="display" style={{ fontVariant: ['tabular-nums'] }}>{show.avg_rating ? Number(show.avg_rating).toFixed(1) : '–'}</T>
+          <View style={{ gap: 4 }}>
+            <Stars value={show.avg_rating ?? 0} size={18} />
+            <T v="caption" color={colors.muted}>{show.ratings_count ? `${show.ratings_count} ${show.ratings_count === 1 ? 'opinión' : 'opiniones'}` : 'Sé el primero en opinar'}</T>
+          </View>
+        </FadeUp>
+
+        <FadeUp delay={140} style={{ marginTop: 28 }}>
+          <SectionLabel>{`Dónde verla · ${show.country}`}</SectionLabel>
+          {provs.length ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20 }}>
+              {provs.map((p) => (
+                <View key={p.provider} style={s.prov}>
+                  {p.logo_url ? <Image source={{ uri: p.logo_url }} style={s.provLogo} accessibilityIgnoresInvertColors /> : <TelevisionSimple size={20} color={colors.textDim} />}
+                  <T v="small" style={{ fontFamily: font.bodyMed }}>{p.provider}</T>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
-      ) : <Text style={s.muted}>Sin información de plataformas para tu país.</Text>}
+          ) : <T v="small" color={colors.muted} style={{ paddingHorizontal: 20 }}>Sin información de plataformas para tu país.</T>}
+        </FadeUp>
 
-      {show.overview ? <Text style={{ color: colors.text, marginTop: 16, lineHeight: 20 }}>{show.overview}</Text> : null}
+        {show.overview ? (
+          <FadeUp delay={200} style={{ marginTop: 28 }}>
+            <SectionLabel>Sinopsis</SectionLabel>
+            <T v="body" color={colors.textDim} numberOfLines={more ? undefined : 4} style={{ marginHorizontal: 20, marginTop: -4 }}>{show.overview}</T>
+            {show.overview.length > 200 && (
+              <PressScale onPress={() => setMore((m) => !m)} accessibilityRole="button" accessibilityLabel={more ? 'Mostrar menos' : 'Leer más'} containerStyle={{ marginHorizontal: 20, marginTop: 8, alignSelf: 'flex-start' }} style={{ minHeight: 44, justifyContent: 'center' }}>
+                <T v="small" color={colors.accent} style={{ fontFamily: font.bodySemi }}>{more ? 'Mostrar menos' : 'Leer más'}</T>
+              </PressScale>
+            )}
+          </FadeUp>
+        ) : null}
 
-      <Text style={[s.title, { marginTop: 24, marginBottom: 8 }]}>{show.my_review ? 'Tu opinión' : '¿Qué te ha parecido?'}</Text>
-      <Stars value={rating} onChange={setRating} size={36} />
-      <TextInput style={[s.input, { height: 90, marginTop: 10 }]} multiline placeholder="Cuenta qué te ha parecido (opcional)"
-        placeholderTextColor={colors.muted} value={body} onChangeText={setBody} maxLength={2000} />
-      {error ? <Text style={s.error}>{error}</Text> : null}
-      {saved ? <Text style={{ color: colors.star, marginBottom: 6 }}>¡Guardado!</Text> : null}
-      <Button title={show.my_review ? 'Actualizar opinión' : 'Publicar opinión'} onPress={save} disabled={rating === 0} />
+        <FadeUp delay={260} style={{ paddingHorizontal: 20, marginTop: 28 }}>
+          <GlassCard>
+            <T v="heading">{show.my_review ? 'Tu opinión' : '¿Qué te ha parecido?'}</T>
+            <View style={{ marginVertical: 14, marginLeft: -4 }}><Stars value={rating} onChange={setRating} size={34} /></View>
+            <Field label="Cuéntalo (opcional)" multiline value={body} onChangeText={setBody} maxLength={2000} placeholder="Qué te gustó, qué no, a quién se la recomendarías…" />
+            {error ? <ErrorBanner text={error} /> : null}
+            {saved ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }} accessibilityLiveRegion="polite">
+                <Check size={16} weight="bold" color={colors.success} /><T v="small" color={colors.success}>Guardado</T>
+              </View>
+            ) : null}
+            <Button title={show.my_review ? 'Actualizar opinión' : 'Publicar opinión'} onPress={save} disabled={rating === 0} loading={saving} />
+          </GlassCard>
+        </FadeUp>
 
-      <Text style={[s.title, { marginTop: 20 }]}>Opiniones</Text>
-      {reviews.map((r) => (
-        <View key={r.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={{ color: colors.text, fontWeight: '600' }}>{r.username}</Text>
-            <Stars value={r.rating} size={14} />
+        <View style={{ marginTop: 32 }}>
+          <SectionLabel>Opiniones</SectionLabel>
+          <View style={{ paddingHorizontal: 20, gap: 10 }}>
+            {reviews.map((r, i) => (
+              <FadeUp key={r.id} delay={i * 45}>
+                <View style={s.review}>
+                  <View style={s.avatar}><T v="caption" style={{ fontFamily: font.bodySemi }}>{r.username[0].toUpperCase()}</T></View>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <T v="small" style={{ fontFamily: font.bodySemi }}>{r.username}</T>
+                      <Stars value={r.rating} size={13} />
+                    </View>
+                    {r.body ? <T v="small" color={colors.textDim}>{r.body}</T> : null}
+                  </View>
+                </View>
+              </FadeUp>
+            ))}
+            {!reviews.length && <T v="small" color={colors.muted}>Todavía nadie ha opinado. Tu opinión puede ser la primera.</T>}
           </View>
-          {r.body ? <Text style={{ color: colors.text, marginTop: 4 }}>{r.body}</Text> : null}
         </View>
-      ))}
-      {!reviews.length && <Text style={s.muted}>Aún no hay opiniones.</Text>}
-    </ScrollView>
+      </ScrollView>
+    </Screen>
   );
 }
+
+const s = StyleSheet.create({
+  prov: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 12, paddingRight: 16, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },
+  provLogo: { width: 26, height: 26, borderRadius: 7 },
+  review: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.glassHi, alignItems: 'center', justifyContent: 'center' },
+});

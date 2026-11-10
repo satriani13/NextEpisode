@@ -61,13 +61,13 @@ test('meta: géneros fijos y plataformas del país del usuario (cacheadas)', asy
 
 test('preferencias: se guardan por usuario y se validan', async () => {
   const { call, token, close } = await setup();
-  assert.deepEqual((await call('GET', '/api/me/prefs', null, token)).body, { genres: [], providers: [] });
+  assert.deepEqual((await call('GET', '/api/me/prefs', null, token)).body, { genres: [], providers: [], origin: 'country' });
   assert.equal((await call('PUT', '/api/me/prefs', { genres: [35, 18], providers: [8] }, token)).status, 200);
-  assert.deepEqual((await call('GET', '/api/me/prefs', null, token)).body, { genres: [35, 18], providers: [8] });
+  assert.deepEqual((await call('GET', '/api/me/prefs', null, token)).body, { genres: [35, 18], providers: [8], origin: 'country' });
   assert.equal((await call('PUT', '/api/me/prefs', { genres: ['x'], providers: [] }, token)).status, 400);
   assert.equal((await call('PUT', '/api/me/prefs', { genres: [], providers: 'no' }, token)).status, 400);
   const other = (await call('POST', '/api/auth/register', { email: 'b@x.es', username: 'bob', password: 'password1' })).body.token;
-  assert.deepEqual((await call('GET', '/api/me/prefs', null, other)).body, { genres: [], providers: [] });
+  assert.deepEqual((await call('GET', '/api/me/prefs', null, other)).body, { genres: [], providers: [], origin: 'country' });
   close();
 });
 
@@ -77,7 +77,7 @@ test('discover: filtra por género y pasa plataformas y país a TMDB', async () 
   assert.equal(d.status, 200);
   assert.deepEqual(d.body.tmdb.map((s) => s.title), ['Ted Lasso']);
   const last = calls.filter((c) => c[0] === 'discover').at(-1)[1];
-  assert.deepEqual(last, { genres: [35], providers: [8, 119], country: 'ES', sort: 'popular' });
+  assert.deepEqual(last, { genres: [35], providers: [8, 119], country: 'ES', sort: 'popular', origin: null });
   assert.equal((await call('GET', '/api/discover?genres=abc,35;drop', null, token)).status, 200); // basura ignorada
   close();
 });
@@ -105,5 +105,39 @@ test('búsqueda: los géneros elegidos suben los resultados que coinciden, sin f
   const boosted = await call('GET', '/api/shows/search?q=aa&genres=10759', null, token);
   assert.equal(boosted.body.tmdb.length, 3);
   assert.equal(boosted.body.tmdb[0].title, 'The Boys');
+  close();
+});
+
+test('origen: origin=country pasa el país del usuario a TMDB (y por defecto no filtra)', async () => {
+  const { call, token, calls, close } = await setup();
+  await call('GET', '/api/discover?sort=new&origin=country', null, token);
+  assert.equal(calls.filter((c) => c[0] === 'discover').at(-1)[1].origin, 'ES');
+  await call('GET', '/api/discover?sort=new&origin=country&country=mx', null, token);
+  assert.equal(calls.filter((c) => c[0] === 'discover').at(-1)[1].origin, 'MX', 'respeta ?country=');
+  await call('GET', '/api/discover?sort=new', null, token);
+  assert.equal(calls.filter((c) => c[0] === 'discover').at(-1)[1].origin, null);
+  await call('GET', '/api/discover?sort=new&origin=all', null, token);
+  assert.equal(calls.filter((c) => c[0] === 'discover').at(-1)[1].origin, null);
+  close();
+});
+
+test('origen: con país, el catálogo propio no se mezcla (no sabe de dónde es cada serie)', async () => {
+  const { call, token, close } = await setup();
+  await call('POST', '/api/shows', { title: 'Serie manual de comedia', year: 2021, genres: 'Comedia' }, token);
+  const all = await call('GET', '/api/discover?genres=35', null, token);
+  assert.ok(all.body.catalog.some((s) => s.title === 'Serie manual de comedia'));
+  const es = await call('GET', '/api/discover?genres=35&origin=country', null, token);
+  assert.ok(!es.body.catalog.some((s) => s.title === 'Serie manual de comedia'));
+  close();
+});
+
+test('origen: preferencia por usuario, validada y conservada por clientes que no la envían', async () => {
+  const { call, token, close } = await setup();
+  assert.equal((await call('GET', '/api/me/prefs', null, token)).body.origin, 'country', 'por defecto: mi país');
+  assert.equal((await call('PUT', '/api/me/prefs', { genres: [], providers: [], origin: 'all' }, token)).status, 200);
+  assert.equal((await call('GET', '/api/me/prefs', null, token)).body.origin, 'all');
+  assert.equal((await call('PUT', '/api/me/prefs', { genres: [35], providers: [] }, token)).status, 200); // cliente antiguo
+  assert.deepEqual((await call('GET', '/api/me/prefs', null, token)).body, { genres: [35], providers: [], origin: 'all' });
+  assert.equal((await call('PUT', '/api/me/prefs', { genres: [], providers: [], origin: 'xx' }, token)).status, 400);
   close();
 });

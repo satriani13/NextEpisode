@@ -224,12 +224,23 @@ export function createApp({
     const gids = ids(req.query.genres);
     const pids = ids(req.query.providers);
     const country = String(req.query.country || req.user.country).toUpperCase();
+    const sort = req.query.sort === 'new' ? 'new' : 'popular';
     let found = [];
-    try { found = (await tmdb.discover?.({ genres: gids, providers: pids, country })) || []; } catch { /* sin TMDB: solo catálogo propio */ }
+    try { found = (await tmdb.discover?.({ genres: gids, providers: pids, country, sort })) || []; } catch { /* sin TMDB: solo catálogo propio */ }
     const known = found.length
       ? db.prepare(`${showSelect} WHERE s.tmdb_id IN (${found.map(() => '?').join(',')}) GROUP BY s.id`).all(...found.map((f) => f.tmdb_id))
       : [];
     const byTmdb = new Map(known.map((k) => [k.tmdb_id, k]));
+    // Novedades: un único orden por fecha de estreno. Las series ya importadas llevan su `show_id` y su nota.
+    if (sort === 'new') {
+      return res.json({
+        catalog: [],
+        tmdb: found.map((f) => {
+          const k = byTmdb.get(f.tmdb_id);
+          return k ? { ...f, show_id: k.id, avg_rating: k.avg_rating, ratings_count: k.ratings_count } : f;
+        }),
+      });
+    }
     let catalog;
     if (pids.length) {
       catalog = found.map((f) => byTmdb.get(f.tmdb_id)).filter(Boolean);
@@ -244,31 +255,41 @@ export function createApp({
   }));
 
   app.post('/api/shows', auth, wrap(async (req, res) => {
-    const { tmdb_id, title, year, overview = '', genres = '' } = req.body || {};
+    const { tmdb_id, title, year, overview = '', genres = '', seasons } = req.body || {};
     if (tmdb_id) {
       const existing = db.prepare('SELECT id FROM shows WHERE tmdb_id = ?').get(tmdb_id);
       if (existing) return res.json({ id: existing.id, created: false });
       let d;
       try { d = await tmdb.details(tmdb_id); } catch { return bad(res, 'Serie no encontrada en TMDB', 404); }
-      const r = db.prepare(`INSERT INTO shows (tmdb_id,title,original_title,title_key,year,overview,poster_url,backdrop_url,genres,source,created_by)
-        VALUES (?,?,?,?,?,?,?,?,?,'tmdb',?)`)
-        .run(d.tmdb_id, d.title, d.original_title, titleKey(d.title), d.year, d.overview, d.poster_url ?? null, d.backdrop_url ?? null, d.genres, req.user.id);
+      const r = db.prepare(`INSERT INTO shows (tmdb_id,title,original_title,title_key,year,overview,poster_url,backdrop_url,genres,seasons,episodes,status,details_at,source,created_by)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),'tmdb',?)`)
+        .run(d.tmdb_id, d.title, d.original_title, titleKey(d.title), d.year, d.overview, d.poster_url ?? null, d.backdrop_url ?? null, d.genres, d.seasons ?? null, d.episodes ?? null, d.status ?? null, req.user.id);
       return res.status(201).json({ id: Number(r.lastInsertRowid), created: true });
     }
     if (typeof title !== 'string' || title.trim().length < 2 || title.length > 120) return bad(res, 'Título no válido');
     const y = year == null || year === '' ? null : Number(year);
     if (y !== null && !(Number.isInteger(y) && y >= 1930 && y <= new Date().getFullYear() + 2)) return bad(res, 'Año no válido');
+    const nSeasons = seasons == null || seasons === '' ? null : Number(seasons);
+    if (nSeasons !== null && !(Number.isInteger(nSeasons) && nSeasons >= 1 && nSeasons <= 100)) return bad(res, 'Temporadas: un número entre 1 y 100');
     const key = titleKey(title);
     const dup = db.prepare('SELECT id FROM shows WHERE title_key = ? AND (year IS ? OR year IS NULL OR ? IS NULL)').get(key, y, y);
     if (dup) return res.json({ id: dup.id, created: false });
-    const r = db.prepare(`INSERT INTO shows (title,title_key,year,overview,genres,source,created_by) VALUES (?,?,?,?,?,'user',?)`)
-      .run(title.trim(), key, y, String(overview).slice(0, 1000), String(genres).slice(0, 200), req.user.id);
+    const r = db.prepare(`INSERT INTO shows (title,title_key,year,overview,genres,seasons,source,created_by) VALUES (?,?,?,?,?,?,'user',?)`)
+      .run(title.trim(), key, y, String(overview).slice(0, 1000), String(genres).slice(0, 200), nSeasons, req.user.id);
     res.status(201).json({ id: Number(r.lastInsertRowid), created: true });
   }));
 
   app.get('/api/shows/:id', auth, wrap(async (req, res) => {
     const show = db.prepare(`${showSelect} WHERE s.id = ? GROUP BY s.id`).get(req.params.id);
     if (!show || show.id == null) return bad(res, 'Serie no encontrada', 404);
+    // Temporadas, episodios y estado vienen de TMDB y cambian (nuevas temporadas): se refrescan como máximo cada 7 días.
+    if (show.tmdb_id && tmdb.details && !(show.details_at && now() - Date.parse(show.details_at.replace(' ', 'T') + 'Z') < 7 * 24 * 3600 * 1000)) {
+      try {
+        const d = await tmdb.details(show.tmdb_id);
+        db.prepare("UPDATE shows SET seasons=?, episodes=?, status=?, details_at=datetime('now') WHERE id=?").run(d.seasons ?? null, d.episodes ?? null, d.status ?? null, show.id);
+        Object.assign(show, { seasons: d.seasons ?? null, episodes: d.episodes ?? null, status: d.status ?? null });
+      } catch { /* sin TMDB: se queda como está */ }
+    }
     const country = String(req.query.country || req.user.country).toUpperCase();
     let providers = db.prepare(`SELECT provider, logo_url FROM show_providers WHERE show_id=? AND country=?
       AND fetched_at > datetime('now', ?)`).all(show.id, country, `-${PROVIDER_TTL_HOURS} hours`);

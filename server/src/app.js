@@ -204,17 +204,20 @@ export function createApp({
   }));
 
   const readPrefs = (userId) => {
-    const r = db.prepare('SELECT genres, providers FROM user_prefs WHERE user_id = ?').get(userId);
-    return { genres: JSON.parse(r?.genres || '[]'), providers: JSON.parse(r?.providers || '[]') };
+    const r = db.prepare('SELECT genres, providers, origin FROM user_prefs WHERE user_id = ?').get(userId);
+    // origin: 'country' = solo producciones de mi país (por defecto); 'all' = de todo el mundo.
+    return { genres: JSON.parse(r?.genres || '[]'), providers: JSON.parse(r?.providers || '[]'), origin: r?.origin || 'country' };
   };
   app.get('/api/me/prefs', auth, (req, res) => res.json(readPrefs(req.user.id)));
   app.put('/api/me/prefs', auth, (req, res) => {
-    const { genres, providers } = req.body || {};
+    const { genres, providers, origin } = req.body || {};
     const ok = (v) => Array.isArray(v) && v.length <= 30 && v.every((n) => Number.isInteger(n) && n > 0);
     if (!ok(genres) || !ok(providers)) return bad(res, 'Preferencias no válidas');
-    db.prepare(`INSERT INTO user_prefs (user_id, genres, providers) VALUES (?,?,?)
-      ON CONFLICT(user_id) DO UPDATE SET genres=excluded.genres, providers=excluded.providers`)
-      .run(req.user.id, JSON.stringify(genres), JSON.stringify(providers));
+    if (origin !== undefined && origin !== 'country' && origin !== 'all') return bad(res, 'Origen no válido');
+    // Sin `origin` en la petición se conserva el que ya hubiera (clientes antiguos).
+    db.prepare(`INSERT INTO user_prefs (user_id, genres, providers, origin) VALUES (?,?,?,COALESCE(?, 'country'))
+      ON CONFLICT(user_id) DO UPDATE SET genres=excluded.genres, providers=excluded.providers, origin=COALESCE(?, user_prefs.origin)`)
+      .run(req.user.id, JSON.stringify(genres), JSON.stringify(providers), origin ?? null, origin ?? null);
     res.json({ ok: true });
   });
 
@@ -225,8 +228,10 @@ export function createApp({
     const pids = ids(req.query.providers);
     const country = String(req.query.country || req.user.country).toUpperCase();
     const sort = req.query.sort === 'new' ? 'new' : 'popular';
+    // origin=country: solo producciones del país del usuario (o ?country=); por defecto, de todo el mundo.
+    const origin = req.query.origin === 'country' ? country : null;
     let found = [];
-    try { found = (await tmdb.discover?.({ genres: gids, providers: pids, country, sort })) || []; } catch { /* sin TMDB: solo catálogo propio */ }
+    try { found = (await tmdb.discover?.({ genres: gids, providers: pids, country, sort, origin })) || []; } catch { /* sin TMDB: solo catálogo propio */ }
     const known = found.length
       ? db.prepare(`${showSelect} WHERE s.tmdb_id IN (${found.map(() => '?').join(',')}) GROUP BY s.id`).all(...found.map((f) => f.tmdb_id))
       : [];
@@ -242,7 +247,7 @@ export function createApp({
       });
     }
     let catalog;
-    if (pids.length) {
+    if (pids.length || origin) { // con plataformas o país manda TMDB; el catálogo propio no sabe de ninguna de las dos
       catalog = found.map((f) => byTmdb.get(f.tmdb_id)).filter(Boolean);
     } else {
       const pats = genrePatterns(gids);

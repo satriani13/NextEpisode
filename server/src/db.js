@@ -45,6 +45,12 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
       genres TEXT NOT NULL DEFAULT '[]',
       providers TEXT NOT NULL DEFAULT '[]'
     );
+    CREATE TABLE IF NOT EXISTS watchlist (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      show_id INTEGER NOT NULL REFERENCES shows(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, show_id)
+    );
     CREATE TABLE IF NOT EXISTS show_providers (
       show_id INTEGER NOT NULL REFERENCES shows(id) ON DELETE CASCADE,
       country TEXT NOT NULL,

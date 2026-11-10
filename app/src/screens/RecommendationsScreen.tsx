@@ -18,7 +18,7 @@ export default function RecommendationsScreen({ navigation }: any) {
 
   const toCard = (s: Show): Card => ({
     key: String(s.id), title: s.title, year: s.year, genres: s.genres, rating: s.avg_rating, count: s.ratings_count,
-    poster: s.poster_url, backdrop: s.backdrop_url, onPress: () => navigation.navigate('Show', { id: s.id }),
+    poster: s.poster_url, backdrop: s.backdrop_url, seasons: s.seasons, onPress: () => navigation.navigate('Show', { id: s.id }),
   });
   const personal = data?.kind === 'personalized';
   const [hero, ...rest] = (data?.shows ?? []).map(toCard);

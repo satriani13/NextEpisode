@@ -13,6 +13,8 @@ import ShowScreen from './src/screens/ShowScreen';
 import AddShowScreen from './src/screens/AddShowScreen';
 import RecommendationsScreen from './src/screens/RecommendationsScreen';
 import MyShowsScreen from './src/screens/MyShowsScreen';
+import UsersScreen from './src/screens/UsersScreen';
+import ForgotScreen from './src/screens/ForgotScreen';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -33,11 +35,13 @@ function HeaderUser() {
 }
 
 function Home() {
+  const { user } = useAuth();
   return (
     <Tabs.Navigator screenOptions={{ headerRight: () => <HeaderUser /> }}>
       <Tabs.Screen name="Buscar" component={SearchScreen} options={{ tabBarIcon: icon('🔍') }} />
       <Tabs.Screen name="Para ti" component={RecommendationsScreen} options={{ tabBarIcon: icon('✨') }} />
       <Tabs.Screen name="Mis series" component={MyShowsScreen} options={{ tabBarIcon: icon('📺') }} />
+      {user?.admin && <Tabs.Screen name="Usuarios" component={UsersScreen} options={{ tabBarIcon: icon('👥') }} />}
     </Tabs.Navigator>
   );
 }
@@ -55,7 +59,10 @@ function Root() {
             <Stack.Screen name="AddShow" component={AddShowScreen} options={{ title: 'Añadir serie' }} />
           </>
         ) : (
-          <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
+          <>
+            <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Forgot" component={ForgotScreen} options={{ title: 'Recuperar contraseña' }} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

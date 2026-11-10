@@ -33,12 +33,18 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
       year INTEGER,
       overview TEXT,
       poster_url TEXT,
+      backdrop_url TEXT,
       genres TEXT NOT NULL DEFAULT '',
       source TEXT NOT NULL CHECK (source IN ('tmdb','user')),
       created_by INTEGER REFERENCES users(id),
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_shows_key ON shows(title_key, year);
+    CREATE TABLE IF NOT EXISTS user_prefs (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      genres TEXT NOT NULL DEFAULT '[]',
+      providers TEXT NOT NULL DEFAULT '[]'
+    );
     CREATE TABLE IF NOT EXISTS show_providers (
       show_id INTEGER NOT NULL REFERENCES shows(id) ON DELETE CASCADE,
       country TEXT NOT NULL,
@@ -65,6 +71,9 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
   }
   if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'token_version')) {
     db.exec('ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!db.prepare('PRAGMA table_info(shows)').all().some((c) => c.name === 'backdrop_url')) {
+    db.exec('ALTER TABLE shows ADD COLUMN backdrop_url TEXT');
   }
   return db;
 }

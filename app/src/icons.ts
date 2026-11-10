@@ -17,3 +17,5 @@ export { TelevisionSimple } from 'phosphor-react-native/src/icons/TelevisionSimp
 export { UsersThree } from 'phosphor-react-native/src/icons/UsersThree';
 export { WarningCircle } from 'phosphor-react-native/src/icons/WarningCircle';
 export { X } from 'phosphor-react-native/src/icons/X';
+export { BookmarkSimple } from 'phosphor-react-native/src/icons/BookmarkSimple';
+export { Plus } from 'phosphor-react-native/src/icons/Plus';

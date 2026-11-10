@@ -60,14 +60,16 @@ export function createTmdb({ apiKey = process.env.TMDB_API_KEY, fetchImpl = fetc
     },
     // Descubrir por género(s) y plataforma(s): varios géneros/plataformas = "o" (separados por |).
     // `sort`: 'new' = estrenos más recientes de lo que se puede ver en streaming en el país; 'popular' = más populares.
-    async discover({ genres = [], providers = [], country = 'ES', sort = 'popular' } = {}) {
+    // `origin`: código de país (p. ej. 'ES') para quedarse solo con producciones de ese país; null = de todo el mundo.
+    async discover({ genres = [], providers = [], country = 'ES', sort = 'popular', origin = null } = {}) {
       if (!enabled) return [];
       const params = sort === 'new'
         ? {
           sort_by: 'first_air_date.desc', 'first_air_date.lte': new Date().toISOString().slice(0, 10),
-          'vote_count.gte': 5, watch_region: country, with_watch_monetization_types: 'flatrate', // ≥5 votos: sin series fantasma
+          'vote_count.gte': origin ? 2 : 5, watch_region: country, with_watch_monetization_types: 'flatrate', // pocos votos: sin series fantasma (un país tiene menos votos)
         }
-        : { sort_by: 'popularity.desc', 'vote_count.gte': 50 };
+        : { sort_by: 'popularity.desc', 'vote_count.gte': origin ? 15 : 50 };
+      if (origin) params.with_origin_country = origin;
       if (genres.length) params.with_genres = genres.join('|');
       if (providers.length) {
         params.with_watch_providers = providers.join('|');

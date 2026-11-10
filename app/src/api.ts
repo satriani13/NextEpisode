@@ -52,10 +52,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 }
 
 export type Show = {
-  id: number; title: string; year: number | null; overview: string | null; poster_url: string | null; backdrop_url: string | null;
+  id: number; title: string; year: number | null; overview: string | null; poster_url: string | null; backdrop_url: string | null; seasons: number | null; episodes: number | null; status: string | null;
   genres: string; avg_rating: number | null; ratings_count: number;
 };
-export type TmdbShow = { tmdb_id: number; title: string; year: number | null; overview: string; poster_url: string | null; backdrop_url: string | null; genres: string; genre_ids: number[] };
+export type TmdbShow = { tmdb_id: number; title: string; year: number | null; overview: string; poster_url: string | null; backdrop_url: string | null; genres: string; genre_ids: number[]; first_air_date: string | null; show_id?: number; avg_rating?: number | null; ratings_count?: number };
 export type Genre = { id: number; name: string };
 export type ProviderOpt = { id: number; name: string; logo_url: string | null };
 export type Meta = { country: string; genres: Genre[]; providers: ProviderOpt[] };
@@ -77,11 +77,11 @@ export const api = {
   adminUsers: () => request<AdminUser[]>('GET', '/admin/users'),
   adminSetPassword: (id: number, password: string) => request<{ ok: true; token?: string }>('POST', `/admin/users/${id}/password`, { password }),
   search: (q: string, genres: number[] = []) => request<Found>('GET', `/shows/search?q=${encodeURIComponent(q)}${genres.length ? `&genres=${genres.join(',')}` : ''}`),
-  discover: (genres: number[], providers: number[]) => request<Found>('GET', `/discover?genres=${genres.join(',')}&providers=${providers.join(',')}`),
+  discover: (genres: number[], providers: number[], sort: 'new' | 'popular' = 'new') => request<Found>('GET', `/discover?genres=${genres.join(',')}&providers=${providers.join(',')}&sort=${sort}`),
   meta: () => request<Meta>('GET', '/meta'),
   prefs: () => request<Prefs>('GET', '/me/prefs'),
   savePrefs: (p: Prefs) => request<{ ok: true }>('PUT', '/me/prefs', p),
-  addShow: (b: { tmdb_id: number } | { title: string; year?: number | null; overview?: string; genres?: string }) =>
+  addShow: (b: { tmdb_id: number } | { title: string; year?: number | null; overview?: string; genres?: string; seasons?: number }) =>
     request<{ id: number; created: boolean }>('POST', '/shows', b),
   show: (id: number) => request<ShowDetail>('GET', `/shows/${id}`),
   reviews: (id: number) => request<Review[]>('GET', `/shows/${id}/reviews`),

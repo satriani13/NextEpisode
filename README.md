@@ -19,7 +19,7 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 
 ### Modelo de datos (SQLite)
 `users` · `shows` (tmdb_id único opcional, `source` tmdb|user) · `show_providers` (caché 24 h por país) ·
-`reviews` (1–5 estrellas + texto, única por usuario/serie; reeditable) · `user_prefs` (géneros y plataformas elegidos) · `watchlist` (usuario + serie: «Quiero ver») · `shows.backdrop_url` (imagen ancha para las fichas).
+`reviews` (1–5 estrellas + texto, única por usuario/serie; reeditable) · `user_prefs` (géneros y plataformas elegidos) · `watchlist` (usuario + serie: «Quiero ver») · `shows.seasons/episodes/status/details_at` (de TMDB; se refrescan al abrir la ficha como mucho cada 7 días; en series manuales, temporadas opcionales) · `shows.backdrop_url` (imagen ancha para las fichas).
 
 ### API (`/api`, todo con `Authorization: Bearer` salvo auth y `/health`)
 | Método | Ruta | Descripción |
@@ -31,7 +31,7 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 | POST | `/admin/users/:id/password` `{password}` | **Solo admin.** Fija una contraseña nueva; cierra las sesiones abiertas de ese usuario |
 | GET | `/shows/search?q=&genres=` | Catálogo local + resultados TMDB aún no importados. Con `genres` (ids separados por comas) suben los que encajan; nada se filtra |
 | GET | `/meta` | Géneros que ofrece la app y plataformas principales del país del usuario (logos de TMDB; caché 24 h) |
-| GET | `/discover?genres=&providers=` | Explorar sin texto: por género(s) y/o plataforma(s) (varios = «o»). Con plataformas manda TMDB (sabe dónde está cada serie); lo ya importado sale como `catalog` con su nota |
+| GET | `/discover?genres=&providers=&sort=` | Explorar sin texto: por género(s) y/o plataforma(s) (varios = «o»). `sort=new` (lo usa la app): estrenos más recientes de lo que hay en streaming en el país (primer estreno ≤ hoy, ≥5 votos), en un único orden por fecha; lo ya importado lleva `show_id` y su nota. `sort=popular` (por defecto en la API): más populares; lo ya importado sale como `catalog` |
 | GET/PUT | `/me/prefs` | Géneros y plataformas favoritos del usuario (se recuerdan entre sesiones y dispositivos) |
 | POST | `/shows` | Importa de TMDB (`tmdb_id`) o crea manualmente (`title`, `year`…) |
 | GET | `/shows/:id` | Ficha, media, plataformas del país, tu reseña |
@@ -43,6 +43,8 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 
 ## Interfaz (rediseño 0.4.0)
 - **Formato:** web app con aspecto de móvil. En pantallas anchas se muestra dentro de un marco de móvil centrado; en un móvil o ventana estrecha ocupa toda la pantalla (`src/components/PhoneFrame.tsx`).
+- **Novedades / Populares:** selector en el inicio (por defecto Novedades): los estrenos más recientes de tus plataformas y géneros, con su fecha. Limitación: ordena por *primer estreno*; una temporada nueva de una serie antigua no aparece como novedad.
+- **Temporadas:** la ficha muestra temporadas, episodios y estado (en emisión, finalizada…); las tarjetas, «N temp.» cuando se conoce.
 - **Quiero ver:** botón en la ficha de cada serie (cambio instantáneo, se deshace si falla) y pestaña «Quiero ver» en «Mis series» con contador y «Quitar de la lista». La lista es privada y, al puntuar una serie, sale sola de ella (ya la has visto).
 - **Inicio = Explorar:** ya no está en blanco. Sugiere **plataformas** (con logo) y **géneros** como chips multi-selección, recordados por usuario; con ellos descubre series (destacada + rejilla). Si escribes un título, manda el título y los géneros elegidos suben lo que encaja.
 - **Sistema visual:** «cine nocturno» — fondo con tinte (no `#000`), un solo acento (ember `#FF6B3D`), superficies de cristal con doble bisel, Outfit (titulares) + Geist (texto), iconos Phosphor de trazo fino. Tokens en `src/theme.ts`, componentes en `src/components/ui.tsx`.
@@ -87,6 +89,7 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAIL
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.6.0** — Novedades (estrenos recientes por plataforma/género) con selector Populares; temporadas, episodios y estado en la ficha con refresco semanal; temporadas opcionales al añadir una serie; 22 tests.
 - **0.5.0** — lista «Quiero ver» (guardar desde la ficha, pestaña en «Mis series», sale sola al puntuar); 19 tests.
 - **0.4.0** — rediseño completo (marco de móvil, tema oscuro, animaciones), inicio Explorar con sugerencias de géneros y plataformas y búsqueda combinada, preferencias por usuario, imágenes anchas en las fichas, bundle 6× más ligero, 16 tests (5 nuevos de explorar/plataformas/preferencias).
 - **0.3.1** — correo por el puerto 587 (STARTTLS): el VPS bloquea el 465 y el envío fallaba por timeout; timeouts explícitos en el mailer.

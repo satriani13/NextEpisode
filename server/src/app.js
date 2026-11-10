@@ -28,7 +28,7 @@ export function createApp({
       res.set({
         'Access-Control-Allow-Origin': corsOrigin,
         'Access-Control-Allow-Headers': 'content-type, authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
       });
       if (req.method === 'OPTIONS') return res.sendStatus(204);
       next();
@@ -281,7 +281,8 @@ export function createApp({
       } catch { /* sin plataformas si TMDB falla */ }
     }
     const mine = db.prepare('SELECT rating, body FROM reviews WHERE show_id=? AND user_id=?').get(show.id, req.user.id) || null;
-    res.json({ ...show, providers, country, my_review: mine });
+    const inList = Boolean(db.prepare('SELECT 1 FROM watchlist WHERE user_id=? AND show_id=?').get(req.user.id, show.id));
+    res.json({ ...show, providers, country, my_review: mine, in_watchlist: inList });
   }));
 
   // ---- Reseñas ----
@@ -299,7 +300,26 @@ export function createApp({
     db.prepare(`INSERT INTO reviews (user_id, show_id, rating, body) VALUES (?,?,?,?)
       ON CONFLICT(user_id, show_id) DO UPDATE SET rating=excluded.rating, body=excluded.body, updated_at=datetime('now')`)
       .run(req.user.id, req.params.id, rating, body.trim());
+    // Si la puntúas es que ya la has visto: deja de estar en «Quiero ver».
+    db.prepare('DELETE FROM watchlist WHERE user_id = ? AND show_id = ?').run(req.user.id, req.params.id);
     res.status(201).json({ ok: true });
+  });
+
+  // ---- Lista «Quiero ver» ----
+  app.get('/api/me/watchlist', auth, (req, res) => {
+    res.json(db.prepare(`SELECT s.id AS show_id, s.title, s.year, s.poster_url, s.genres, w.created_at AS added_at,
+        (SELECT ROUND(AVG(rating), 2) FROM reviews WHERE show_id = s.id) AS avg_rating
+      FROM watchlist w JOIN shows s ON s.id = w.show_id WHERE w.user_id = ? ORDER BY w.created_at DESC, s.id DESC`).all(req.user.id));
+  });
+  app.put('/api/me/watchlist/:id', auth, (req, res) => {
+    if (!db.prepare('SELECT 1 FROM shows WHERE id = ?').get(req.params.id)) return bad(res, 'Serie no encontrada', 404);
+    if (db.prepare('SELECT 1 FROM reviews WHERE user_id = ? AND show_id = ?').get(req.user.id, req.params.id)) return bad(res, 'Ya la has puntuado: no hace falta guardarla', 409);
+    db.prepare('INSERT OR IGNORE INTO watchlist (user_id, show_id) VALUES (?, ?)').run(req.user.id, req.params.id);
+    res.json({ ok: true });
+  });
+  app.delete('/api/me/watchlist/:id', auth, (req, res) => {
+    db.prepare('DELETE FROM watchlist WHERE user_id = ? AND show_id = ?').run(req.user.id, req.params.id);
+    res.json({ ok: true });
   });
 
   app.get('/api/me/reviews', auth, (req, res) => {

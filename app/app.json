@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
     },
@@ -21,13 +21,21 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "name": "NextEpisode",
+      "shortName": "NextEpisode",
+      "description": "Puntúa series y descubre qué ver después",
+      "themeColor": "#0B0B10",
+      "backgroundColor": "#0B0B10",
+      "lang": "es"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ],
     "experiments": {
       "baseUrl": "/proyectos/nextepisode"
-    }
+    },
+    "backgroundColor": "#0B0B10"
   }
 }

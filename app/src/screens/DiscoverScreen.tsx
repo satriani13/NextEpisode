@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { MagnifyingGlass, SlidersHorizontal, X } from '../icons';
-import { api, Found, Meta, TmdbShow } from '../api';
+import { api, Found, Meta, Origin, TmdbShow } from '../api';
 import { useAuth } from '../auth';
 import { FadeUp, PressScale } from '../motion';
 import { Button, Card, Chip, Empty, ErrorBanner, FeaturedCard, ResultsSkeleton, Screen, ScreenHeader, SectionLabel, ShowCard, T } from '../components/ui';
@@ -21,6 +21,7 @@ export default function DiscoverScreen({ navigation }: any) {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [sort, setSort] = useState<'new' | 'popular'>('new');
+  const [origin, setOrigin] = useState<Origin>('country'); // por defecto: solo producciones de mi país
   const dirty = useRef(false);
 
   // Preferencias guardadas + catálogo de géneros/plataformas.
@@ -29,7 +30,7 @@ export default function DiscoverScreen({ navigation }: any) {
     Promise.allSettled([api.meta(), api.prefs()]).then(([m, p]) => {
       if (!alive) return;
       if (m.status === 'fulfilled') setMeta(m.value);
-      if (p.status === 'fulfilled') { setGenres(p.value.genres); setProviders(p.value.providers); }
+      if (p.status === 'fulfilled') { setGenres(p.value.genres); setProviders(p.value.providers); setOrigin(p.value.origin ?? 'country'); }
       setReady(true);
     });
     return () => { alive = false; };
@@ -38,9 +39,9 @@ export default function DiscoverScreen({ navigation }: any) {
   // Guardar preferencias (solo si el usuario las ha tocado), con pausa para no saturar.
   useEffect(() => {
     if (!dirty.current) return;
-    const h = setTimeout(() => { api.savePrefs({ genres, providers }).catch(() => {}); }, 700);
+    const h = setTimeout(() => { api.savePrefs({ genres, providers, origin }).catch(() => {}); }, 700);
     return () => clearTimeout(h);
-  }, [genres, providers]);
+  }, [genres, providers, origin]);
 
   // Buscar: con texto → por título (géneros suben coincidencias); sin texto → descubrir por géneros/plataformas.
   const term = q.trim();
@@ -49,13 +50,13 @@ export default function DiscoverScreen({ navigation }: any) {
     let alive = true;
     setLoading(true); setError('');
     const h = setTimeout(() => {
-      (term.length >= 2 ? api.search(term, genres) : api.discover(genres, providers, sort))
+      (term.length >= 2 ? api.search(term, genres) : api.discover(genres, providers, sort, origin))
         .then((r) => alive && setRes(r))
         .catch((e) => alive && setError(e.message))
         .finally(() => alive && setLoading(false));
     }, term ? 320 : 120);
     return () => { alive = false; clearTimeout(h); };
-  }, [ready, term, genres, providers, sort, retry]);
+  }, [ready, term, genres, providers, sort, origin, retry]);
 
   const toggle = (list: number[], set: (n: number[]) => void, id: number) => {
     dirty.current = true;
@@ -89,9 +90,12 @@ export default function DiscoverScreen({ navigation }: any) {
   const name = (list: number[], src?: { id: number; name: string }[]) => list.map((id) => src?.find((x) => x.id === id)?.name).filter(Boolean) as string[];
   const gNames = name(genres, meta?.genres);
   const pNames = name(providers, meta?.providers);
-  const mix = [pNames.join(', '), gNames.join(', ')].filter(Boolean).join(' · ');
+  const countryName = (() => { try { return new Intl.DisplayNames(['es'], { type: 'region' }).of(meta?.country ?? 'ES') ?? 'tu país'; } catch { return 'tu país'; } })();
+  const originOn = origin === 'country';
+  const mix = [originOn ? `Series de ${countryName}` : '', pNames.join(', '), gNames.join(', ')].filter(Boolean).join(' · ');
   const novelty = sort === 'new' && term.length < 2;
-  const heading = term.length >= 2 ? `Resultados para “${term}”` : novelty ? (mix ? 'Novedades para tu mezcla' : 'Últimos estrenos') : mix ? 'Para tu mezcla' : 'Lo más visto ahora';
+  const picked = genres.length + providers.length > 0; // el país es un ajuste aparte: no cuenta como «mezcla»
+  const heading = term.length >= 2 ? `Resultados para “${term}”` : novelty ? (picked ? 'Novedades para tu mezcla' : 'Últimos estrenos') : picked ? 'Para tu mezcla' : 'Lo más visto ahora';
   const sub = term.length >= 2
     ? (gNames.length ? `Primero lo que encaja con ${gNames.join(', ')}` : 'Elige géneros para que suban los que más te apetecen')
     : mix || (novelty ? 'Lo más reciente en streaming en tu país' : 'Elige plataformas y géneros para afinar');
@@ -101,6 +105,7 @@ export default function DiscoverScreen({ navigation }: any) {
   const right = rest.filter((_, i) => i % 2 === 1);
 
   const clearFilters = () => { dirty.current = true; setGenres([]); setProviders([]); };
+  const toggleOrigin = () => { dirty.current = true; setOrigin((o) => (o === 'country' ? 'all' : 'country')); };
 
   return (
     <Screen>
@@ -157,6 +162,12 @@ export default function DiscoverScreen({ navigation }: any) {
           </View>
         )}
 
+        {term.length < 2 && (
+          <View style={{ paddingHorizontal: 20, marginBottom: 20, alignItems: 'flex-start' }}>
+            <Chip label={`Solo series de ${countryName}`} selected={originOn} onPress={toggleOrigin} />
+          </View>
+        )}
+
         {loading ? <ResultsSkeleton /> : error ? <ErrorBanner text={error} onRetry={() => setRetry((r) => r + 1)} /> : cards.length ? (
           <View style={{ paddingHorizontal: 20, gap: 20 }}>
             <FeaturedCard card={hero} label={novelty ? 'Último estreno' : hasFilters ? 'Encaja contigo' : 'Lo más visto'} />
@@ -171,8 +182,8 @@ export default function DiscoverScreen({ navigation }: any) {
           <Empty
             icon={<SlidersHorizontal size={30} weight="light" color={colors.textDim} />}
             title={hasFilters || term ? 'Nada con esa combinación' : 'Aún no hay series'}
-            body={hasFilters ? 'Prueba con menos géneros o con otra plataforma.' : 'Añade la primera serie que hayas visto.'}
-            action={hasFilters ? <Button variant="glass" title="Quitar filtros" onPress={clearFilters} /> : undefined}
+            body={originOn ? `Prueba con menos filtros o incluye series de otros países (ahora solo salen las de ${countryName}).` : hasFilters ? 'Prueba con menos géneros o con otra plataforma.' : 'Añade la primera serie que hayas visto.'}
+            action={originOn ? <Button variant="glass" title="Ver series de todo el mundo" onPress={toggleOrigin} /> : hasFilters ? <Button variant="glass" title="Quitar filtros" onPress={clearFilters} /> : undefined}
           />
         )}
 

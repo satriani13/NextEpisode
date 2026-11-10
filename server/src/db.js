@@ -47,7 +47,8 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
     CREATE TABLE IF NOT EXISTS user_prefs (
       user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       genres TEXT NOT NULL DEFAULT '[]',
-      providers TEXT NOT NULL DEFAULT '[]'
+      providers TEXT NOT NULL DEFAULT '[]',
+      origin TEXT NOT NULL DEFAULT 'country'
     );
     CREATE TABLE IF NOT EXISTS watchlist (
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -84,6 +85,9 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
   }
   if (!db.prepare('PRAGMA table_info(shows)').all().some((c) => c.name === 'backdrop_url')) {
     db.exec('ALTER TABLE shows ADD COLUMN backdrop_url TEXT');
+  }
+  if (!db.prepare('PRAGMA table_info(user_prefs)').all().some((c) => c.name === 'origin')) {
+    db.exec("ALTER TABLE user_prefs ADD COLUMN origin TEXT NOT NULL DEFAULT 'country'");
   }
   for (const col of ['seasons INTEGER', 'episodes INTEGER', 'status TEXT', 'details_at TEXT']) {
     if (!db.prepare('PRAGMA table_info(shows)').all().some((c) => c.name === col.split(' ')[0])) db.exec(`ALTER TABLE shows ADD COLUMN ${col}`);

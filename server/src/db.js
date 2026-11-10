@@ -14,7 +14,15 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
       username TEXT NOT NULL UNIQUE COLLATE NOCASE,
       password_hash TEXT NOT NULL,
       country TEXT NOT NULL DEFAULT 'ES',
+      token_version INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS password_resets (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      code_hash TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS shows (
       id INTEGER PRIMARY KEY,
@@ -54,6 +62,9 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
   // Migración para BDs creadas antes de existir original_title.
   if (!db.prepare('PRAGMA table_info(shows)').all().some((c) => c.name === 'original_title')) {
     db.exec('ALTER TABLE shows ADD COLUMN original_title TEXT');
+  }
+  if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'token_version')) {
+    db.exec('ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0');
   }
   return db;
 }

@@ -60,11 +60,16 @@ export type Provider = { provider: string; logo_url: string | null };
 export type ShowDetail = Show & { providers: Provider[]; country: string; my_review: { rating: number; body: string } | null };
 export type Review = { id: number; rating: number; body: string; updated_at: string; username: string };
 export type MyReview = { show_id: number; title: string; year: number | null; poster_url: string | null; rating: number; body: string };
-export type AuthResult = { token: string; user: { id: number; username: string; country: string } };
+export type AuthResult = { token: string; user: { id: number; username: string; country: string; admin: boolean } };
+export type AdminUser = { id: number; email: string; username: string; country: string; created_at: string; reviews_count: number; admin: boolean };
 
 export const api = {
   register: (b: { email: string; username: string; password: string; country: string }) => request<AuthResult>('POST', '/auth/register', b),
   login: (b: { email: string; password: string }) => request<AuthResult>('POST', '/auth/login', b),
+  forgot: (email: string) => request<{ ok: true; message: string }>('POST', '/auth/forgot', { email }),
+  reset: (b: { email: string; code: string; password: string }) => request<{ ok: true }>('POST', '/auth/reset', b),
+  adminUsers: () => request<AdminUser[]>('GET', '/admin/users'),
+  adminSetPassword: (id: number, password: string) => request<{ ok: true; token?: string }>('POST', `/admin/users/${id}/password`, { password }),
   search: (q: string) => request<{ catalog: Show[]; tmdb: TmdbShow[] }>('GET', `/shows/search?q=${encodeURIComponent(q)}`),
   addShow: (b: { tmdb_id: number } | { title: string; year?: number | null; overview?: string; genres?: string }) =>
     request<{ id: number; created: boolean }>('POST', '/shows', b),

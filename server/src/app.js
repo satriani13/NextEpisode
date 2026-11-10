@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -6,7 +7,12 @@ import { titleKey } from './db.js';
 
 const PROVIDER_TTL_HOURS = 24;
 
-export function createApp({ db, tmdb, jwtSecret = process.env.JWT_SECRET }) {
+export function createApp({
+  db, tmdb, jwtSecret = process.env.JWT_SECRET,
+  mailer = { async sendResetCode() {} },
+  adminEmails = (process.env.ADMIN_EMAILS || '').split(','),
+  now = () => Date.now(),
+}) {
   if (!jwtSecret) throw new Error('JWT_SECRET requerido');
   const app = express();
   app.disable('x-powered-by');
@@ -31,16 +37,28 @@ export function createApp({ db, tmdb, jwtSecret = process.env.JWT_SECRET }) {
   const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
   const bad = (res, msg, code = 400) => res.status(code).json({ error: msg });
 
+  // Administradores: emails de ADMIN_EMAILS (variable del servidor). Nadie se asciende desde la app.
+  const admins = new Set(adminEmails.map((e) => e.trim().toLowerCase()).filter(Boolean));
+  const isAdmin = (email) => admins.has(String(email).toLowerCase());
+  const publicUser = (u) => ({ id: u.id, username: u.username, country: u.country, admin: isAdmin(u.email) });
+
+  // Cada petición valida el usuario en BD: si cambia su contraseña (token_version) los tokens viejos dejan de valer.
   const auth = (req, res, next) => {
-    const h = req.get('authorization') || '';
+    let p;
     try {
-      req.user = jwt.verify(h.replace(/^Bearer /, ''), jwtSecret);
-      next();
+      p = jwt.verify((req.get('authorization') || '').replace(/^Bearer /, ''), jwtSecret);
     } catch {
-      bad(res, 'No autenticado', 401);
+      return bad(res, 'No autenticado', 401);
     }
+    const u = db.prepare('SELECT id, email, username, country, token_version FROM users WHERE id = ?').get(p.id);
+    if (!u || u.token_version !== (p.tv ?? 0)) return bad(res, 'Sesión caducada', 401);
+    req.user = { id: u.id, username: u.username, country: u.country, email: u.email, admin: isAdmin(u.email) };
+    next();
   };
-  const sign = (u) => jwt.sign({ id: u.id, username: u.username, country: u.country }, jwtSecret, { expiresIn: '30d' });
+  const adminOnly = (req, res, next) => (req.user.admin ? next() : bad(res, 'Solo administradores', 403));
+  const sign = (u) => jwt.sign(
+    { id: u.id, username: u.username, country: u.country, admin: isAdmin(u.email), tv: u.token_version ?? 0 },
+    jwtSecret, { expiresIn: '30d' });
 
   const showSelect = `
     SELECT s.*, ROUND(AVG(r.rating), 2) AS avg_rating, COUNT(r.id) AS ratings_count
@@ -61,8 +79,8 @@ export function createApp({ db, tmdb, jwtSecret = process.env.JWT_SECRET }) {
     try {
       const r = db.prepare('INSERT INTO users (email, username, password_hash, country) VALUES (?,?,?,?)')
         .run(email, username, bcrypt.hashSync(password, 10), country.toUpperCase());
-      const user = { id: Number(r.lastInsertRowid), username, country: country.toUpperCase() };
-      res.status(201).json({ token: sign(user), user });
+      const user = { id: Number(r.lastInsertRowid), email, username, country: country.toUpperCase() };
+      res.status(201).json({ token: sign(user), user: publicUser(user) });
     } catch (e) {
       if (String(e.message).includes('UNIQUE')) return bad(res, 'Email o usuario ya registrado', 409);
       throw e;
@@ -74,8 +92,74 @@ export function createApp({ db, tmdb, jwtSecret = process.env.JWT_SECRET }) {
     const u = db.prepare('SELECT * FROM users WHERE email = ?').get(String(email || ''));
     const ok = bcrypt.compareSync(String(password || ''), u ? u.password_hash : DUMMY_HASH);
     if (!u || !ok) return bad(res, 'Credenciales incorrectas', 401);
-    res.json({ token: sign(u), user: { id: u.id, username: u.username, country: u.country } });
+    res.json({ token: sign(u), user: publicUser(u) });
   }));
+
+  // ---- Recuperación de contraseña por correo ----
+  // Código de 8 caracteres enviado al email, válido 1 h, máx. 5 intentos, uno activo por usuario.
+  const resetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, skip: () => process.env.NODE_ENV === 'test' });
+  const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O/1/I
+  const RESET_TTL_MS = 60 * 60 * 1000;
+  const RESET_COOLDOWN_MS = 60 * 1000;
+  const RESET_MAX_ATTEMPTS = 5;
+  const newCode = () => Array.from(crypto.randomBytes(8), (b) => ALPHABET[b % 32]).join('');
+  const normCode = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const hashCode = (c) => crypto.createHash('sha256').update(c).digest();
+
+  app.post('/api/auth/forgot', resetLimiter, (req, res) => {
+    const email = String(req.body?.email || '').trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) return bad(res, 'Email no válido');
+    const generic = { ok: true, message: 'Si el email está registrado, recibirás un código en unos minutos.' };
+    const u = db.prepare('SELECT id, email, username FROM users WHERE email = ?').get(email);
+    if (!u) return res.json(generic); // misma respuesta exista o no: no se revela quién está registrado
+    const last = db.prepare('SELECT created_at FROM password_resets WHERE user_id = ?').get(u.id);
+    if (last && now() - last.created_at < RESET_COOLDOWN_MS) return res.json(generic);
+    const code = newCode();
+    db.prepare(`INSERT INTO password_resets (user_id, code_hash, expires_at, attempts, created_at) VALUES (?,?,?,0,?)
+      ON CONFLICT(user_id) DO UPDATE SET code_hash=excluded.code_hash, expires_at=excluded.expires_at, attempts=0, created_at=excluded.created_at`)
+      .run(u.id, hashCode(code).toString('hex'), now() + RESET_TTL_MS, now());
+    // Sin await: el tiempo de respuesta no delata si el email existe.
+    Promise.resolve(mailer.sendResetCode({ to: u.email, username: u.username, code }))
+      .catch((e) => console.error('Fallo enviando el correo de recuperación:', e.message));
+    res.json(generic);
+  });
+
+  app.post('/api/auth/reset', resetLimiter, (req, res) => {
+    const { email, code, password } = req.body || {};
+    if (typeof password !== 'string' || password.length < 8) return bad(res, 'La contraseña necesita al menos 8 caracteres');
+    const invalid = () => bad(res, 'Código incorrecto o caducado');
+    const u = db.prepare('SELECT id FROM users WHERE email = ?').get(String(email || '').trim());
+    const r = u && db.prepare('SELECT * FROM password_resets WHERE user_id = ?').get(u.id);
+    if (!r || r.expires_at < now() || r.attempts >= RESET_MAX_ATTEMPTS) return invalid();
+    if (!crypto.timingSafeEqual(hashCode(normCode(code)), Buffer.from(r.code_hash, 'hex'))) {
+      db.prepare('UPDATE password_resets SET attempts = attempts + 1 WHERE user_id = ?').run(u.id);
+      return invalid();
+    }
+    db.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?').run(bcrypt.hashSync(password, 10), u.id);
+    db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(u.id);
+    res.json({ ok: true });
+  });
+
+  // ---- Administración de usuarios (solo ADMIN_EMAILS) ----
+  // Las contraseñas están cifradas (bcrypt): no se pueden ver, solo fijar una nueva.
+  app.get('/api/admin/users', auth, adminOnly, (_req, res) => {
+    const rows = db.prepare(`SELECT u.id, u.email, u.username, u.country, u.created_at, COUNT(r.id) AS reviews_count
+      FROM users u LEFT JOIN reviews r ON r.user_id = u.id GROUP BY u.id ORDER BY u.id DESC`).all();
+    res.json(rows.map((u) => ({ ...u, admin: isAdmin(u.email) })));
+  });
+
+  app.post('/api/admin/users/:id/password', auth, adminOnly, (req, res) => {
+    const { password } = req.body || {};
+    if (typeof password !== 'string' || password.length < 8) return bad(res, 'La contraseña necesita al menos 8 caracteres');
+    const target = db.prepare('SELECT id, email, username, country, token_version FROM users WHERE id = ?').get(req.params.id);
+    if (!target) return bad(res, 'Usuario no encontrado', 404);
+    db.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?').run(bcrypt.hashSync(password, 10), target.id);
+    db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(target.id);
+    console.log(`[admin] ${req.user.username} cambió la contraseña de ${target.username} (id ${target.id})`);
+    // Si el admin se cambia la suya, la sesión actual quedaría invalidada: le damos un token nuevo.
+    const token = target.id === req.user.id ? sign({ ...target, token_version: target.token_version + 1 }) : undefined;
+    res.json({ ok: true, token });
+  });
 
   // ---- Series ----
   app.get('/api/shows/search', auth, wrap(async (req, res) => {

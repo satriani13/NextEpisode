@@ -60,6 +60,12 @@ export default function ShowScreen({ route, navigation }: any) {
   // Sin variantes "con anuncios" como si fueran otra plataforma (salvo que sea lo único que hay).
   const clean = show.providers.filter((p) => !/with ads|standard/i.test(p.provider));
   const provs = clean.length ? clean : show.providers;
+  const STATUS: Record<string, string> = { 'Returning Series': 'En emisión', Ended: 'Finalizada', Canceled: 'Cancelada', 'In Production': 'En producción', Planned: 'Prevista', Pilot: 'Piloto' };
+  const facts = [
+    show.seasons ? `${show.seasons} ${show.seasons === 1 ? 'temporada' : 'temporadas'}` : null,
+    show.episodes ? `${show.episodes} episodios` : null,
+    show.status ? STATUS[show.status] ?? null : null,
+  ].filter(Boolean) as string[];
   return (
     <Screen aurora={false}>
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 48 }}>
@@ -80,6 +86,16 @@ export default function ShowScreen({ route, navigation }: any) {
             <T v="caption" color={colors.muted}>{show.ratings_count ? `${show.ratings_count} ${show.ratings_count === 1 ? 'opinión' : 'opiniones'}` : 'Sé el primero en opinar'}</T>
           </View>
         </FadeUp>
+
+        {facts.length > 0 && (
+          <FadeUp delay={95} style={{ paddingHorizontal: 20, marginTop: 16, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {facts.map((f, i) => (
+              <View key={f} style={[s.fact, i === 0 && s.factMain]} accessibilityLabel={f}>
+                <T v="small" color={i === 0 ? colors.text : colors.textDim} style={{ fontFamily: i === 0 ? font.bodySemi : font.bodyMed }}>{f}</T>
+              </View>
+            ))}
+          </FadeUp>
+        )}
 
         {!show.my_review && (
           <FadeUp delay={110} style={{ paddingHorizontal: 20, marginTop: 18 }}>
@@ -161,6 +177,8 @@ export default function ShowScreen({ route, navigation }: any) {
 }
 
 const s = StyleSheet.create({
+  fact: { minHeight: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline, justifyContent: 'center' },
+  factMain: { backgroundColor: colors.glassHi },
   watch: { alignSelf: 'flex-start', minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },
   watchOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
   prov: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 12, paddingRight: 16, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },

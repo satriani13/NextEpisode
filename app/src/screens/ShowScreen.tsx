@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, TelevisionSimple } from '../icons';
+import { BookmarkSimple, Check, TelevisionSimple } from '../icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, Review, ShowDetail } from '../api';
 import { FadeUp, PressScale, Skeleton } from '../motion';
@@ -20,11 +20,13 @@ export default function ShowScreen({ route, navigation }: any) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [more, setMore] = useState(false);
+  const [inList, setInList] = useState(false);
+  const [listBusy, setListBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const [d, r] = await Promise.all([api.show(id), api.reviews(id)]);
-      setShow(d); setReviews(r);
+      setShow(d); setReviews(r); setInList(d.in_watchlist);
       if (d.my_review) { setRating(d.my_review.rating); setBody(d.my_review.body); }
     } catch (e: any) { setError(e.message); }
   }, [id]);
@@ -34,6 +36,15 @@ export default function ShowScreen({ route, navigation }: any) {
     setError(''); setSaved(false); setSaving(true);
     try { await api.rate(id, rating, body); setSaved(true); await load(); }
     catch (e: any) { setError(e.message); } finally { setSaving(false); }
+  }
+
+  // «Quiero ver»: cambia al instante y se deshace si el servidor falla.
+  async function toggleList() {
+    if (listBusy) return;
+    const next = !inList;
+    setInList(next); setListBusy(true); setError('');
+    try { await (next ? api.addWatch(id) : api.removeWatch(id)); }
+    catch (e: any) { setInList(!next); setError(e.message); } finally { setListBusy(false); }
   }
 
   if (!show) {
@@ -69,6 +80,19 @@ export default function ShowScreen({ route, navigation }: any) {
             <T v="caption" color={colors.muted}>{show.ratings_count ? `${show.ratings_count} ${show.ratings_count === 1 ? 'opinión' : 'opiniones'}` : 'Sé el primero en opinar'}</T>
           </View>
         </FadeUp>
+
+        {!show.my_review && (
+          <FadeUp delay={110} style={{ paddingHorizontal: 20, marginTop: 18 }}>
+            <PressScale
+              onPress={toggleList} accessibilityRole="button" accessibilityState={{ selected: inList, busy: listBusy }}
+              accessibilityLabel={inList ? 'Quitar de Quiero ver' : 'Guardar en Quiero ver'} scale={0.97}
+              style={[s.watch, inList && s.watchOn]}
+            >
+              <BookmarkSimple size={20} weight={inList ? 'fill' : 'regular'} color={inList ? colors.accent : colors.textDim} />
+              <T v="small" color={inList ? colors.text : colors.textDim} style={{ fontFamily: font.bodySemi }}>{inList ? 'En tu lista · Quiero ver' : 'Quiero ver'}</T>
+            </PressScale>
+          </FadeUp>
+        )}
 
         <FadeUp delay={140} style={{ marginTop: 28 }}>
           <SectionLabel>{`Dónde verla · ${show.country}`}</SectionLabel>
@@ -137,6 +161,8 @@ export default function ShowScreen({ route, navigation }: any) {
 }
 
 const s = StyleSheet.create({
+  watch: { alignSelf: 'flex-start', minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },
+  watchOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
   prov: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 12, paddingRight: 16, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },
   provLogo: { width: 26, height: 26, borderRadius: 7 },
   review: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },

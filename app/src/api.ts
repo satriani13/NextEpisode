@@ -59,7 +59,8 @@ export type TmdbShow = { tmdb_id: number; title: string; year: number | null; ov
 export type Genre = { id: number; name: string };
 export type ProviderOpt = { id: number; name: string; logo_url: string | null };
 export type Meta = { country: string; genres: Genre[]; providers: ProviderOpt[] };
-export type Prefs = { genres: number[]; providers: number[] };
+export type Origin = 'country' | 'all';
+export type Prefs = { genres: number[]; providers: number[]; origin?: Origin };
 export type Found = { catalog: Show[]; tmdb: TmdbShow[] };
 export type Provider = { provider: string; logo_url: string | null };
 export type ShowDetail = Show & { providers: Provider[]; country: string; my_review: { rating: number; body: string } | null; in_watchlist: boolean };
@@ -77,7 +78,8 @@ export const api = {
   adminUsers: () => request<AdminUser[]>('GET', '/admin/users'),
   adminSetPassword: (id: number, password: string) => request<{ ok: true; token?: string }>('POST', `/admin/users/${id}/password`, { password }),
   search: (q: string, genres: number[] = []) => request<Found>('GET', `/shows/search?q=${encodeURIComponent(q)}${genres.length ? `&genres=${genres.join(',')}` : ''}`),
-  discover: (genres: number[], providers: number[], sort: 'new' | 'popular' = 'new') => request<Found>('GET', `/discover?genres=${genres.join(',')}&providers=${providers.join(',')}&sort=${sort}`),
+  discover: (genres: number[], providers: number[], sort: 'new' | 'popular' = 'new', origin: Origin = 'all') =>
+    request<Found>('GET', `/discover?genres=${genres.join(',')}&providers=${providers.join(',')}&sort=${sort}&origin=${origin}`),
   meta: () => request<Meta>('GET', '/meta'),
   prefs: () => request<Prefs>('GET', '/me/prefs'),
   savePrefs: (p: Prefs) => request<{ ok: true }>('PUT', '/me/prefs', p),

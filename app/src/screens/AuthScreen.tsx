@@ -5,7 +5,7 @@ import { useAuth } from '../auth';
 import { Button, s } from '../components/ui';
 import { colors } from '../theme';
 
-export default function AuthScreen() {
+export default function AuthScreen({ route, navigation }: any) {
   const { signIn } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -13,6 +13,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [country, setCountry] = useState('ES');
   const [error, setError] = useState('');
+  const notice: string | undefined = route?.params?.notice;
   const [busy, setBusy] = useState(false);
 
   async function submit() {
@@ -34,8 +35,14 @@ export default function AuthScreen() {
           <TextInput style={s.input} placeholder="País (ES, MX, AR…)" placeholderTextColor={colors.muted} autoCapitalize="characters" maxLength={2} value={country} onChangeText={setCountry} />
         </>}
         <TextInput style={s.input} placeholder="Contraseña (mín. 8)" placeholderTextColor={colors.muted} secureTextEntry value={password} onChangeText={setPassword} />
+        {notice && !error ? <Text style={{ color: colors.star, marginBottom: 8 }}>{notice}</Text> : null}
         {error ? <Text style={s.error}>{error}</Text> : null}
         <Button title={mode === 'login' ? 'Entrar' : 'Crear cuenta'} onPress={submit} disabled={busy} />
+        {mode === 'login' && (
+          <Pressable onPress={() => navigation.navigate('Forgot', { email })}>
+            <Text style={[s.muted, { textAlign: 'center', marginTop: 12, color: colors.accent }]}>¿Has olvidado tu contraseña?</Text>
+          </Pressable>
+        )}
         <Pressable onPress={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}>
           <Text style={[s.muted, { textAlign: 'center', marginTop: 12 }]}>
             {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Entra'}

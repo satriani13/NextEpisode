@@ -5,7 +5,7 @@ Buscas una serie que has visto, la puntúas y dejas tu opinión. Si la serie no 
 y otros usuarios pueden opinar sobre ella. Las recomendaciones salen de usuarios con gustos parecidos.
 
 ## Estado
-MVP funcional. **API y versión web desplegadas en el VPS**: API en `https://jpchost.ddns.net/proyectos/nextepisode/api`; web de la app en `https://jpchost.ddns.net/proyectos/nextepisode/` (visible en el Portal de Demos, requiere login). La app móvil aún no está publicada en tiendas.
+MVP funcional. **API y versión web desplegadas en el VPS**, **públicas (beta con amigos)**: web en **`https://jpctools.es/nextepisode`** (alias de `https://jpctools.es/proyectos/nextepisode/`; también por `jpchost.ddns.net` y `apps.esfacilsisabes.es`), sin login del portal; API en `…/proyectos/nextepisode/api`. Sigue listada en el Portal de Demos. La app móvil aún no está publicada en tiendas.
 Flujo probado de extremo a extremo en la versión web de la app (registro → buscar → añadir serie → puntuar).
 
 ## Arquitectura
@@ -64,6 +64,9 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 - Secretos en `server/.env` (chmod 600, fuera del repo): `JWT_SECRET`, `TMDB_API_KEY`. BD SQLite en `server/data/` (gitignored).
 - nginx (`/etc/nginx/sites-enabled/portal`): `location /proyectos/nextepisode/api/` → `127.0.0.1:3025/api/` (más `= /proyectos/nextepisode/health`), **sin `auth_request` del portal**:
   la app móvil usa su propio JWT. Misma URL en `jpchost.ddns.net`, `jpctools.es` y `apps.esfacilsisabes.es`. `TRUST_PROXY=1` para que el rate-limit vea la IP real.
+- **Acceso público:** la web se sirve con `location /proyectos/nextepisode/` propia (alias a `app-web/`, **sin `auth_request`**; más específica que la genérica `/proyectos/`, que sí exige sesión del portal). `index.html` con `no-cache`; `_expo/` y `assets/` (nombres con hash) con caché de 1 año; `X-Robots-Tag: noindex, nofollow` + `<meta name="robots">` (beta no indexable). Alias corto `/nextepisode` → 301. El resto de apps del portal siguen protegidas. Backups de nginx: `/root/portal.bak.nextepisode-*`.
+- **Registro abierto:** cualquiera con el enlace puede crear cuenta. Protecciones: límite de 20 intentos de login/registro por IP cada 15 min (429), rutas de la API con JWT, administración solo para `ADMIN_EMAILS`, recuperación con límite por IP y por usuario. Si hiciera falta cerrarlo: código de invitación en el registro (pendiente de implementar).
+- **Atribución (obligatoria):** aviso de TMDB y «Datos de plataformas: JustWatch» en el acceso, en «Mis series» y en la ficha. Pendiente: logo oficial de TMDB en los créditos.
 - **Portal de Demos:** registrada como proyecto id 34 (`nextepisode`, type `app`, hosting `vps`, `public=0`). Muestra la **versión web** de la app (Expo `-p web`, `output: single`, `experiments.baseUrl=/proyectos/nextepisode`), estática en `app-web/` (gitignored), symlink `/var/www/proyectos/nextepisode`, servida por la location genérica `/proyectos/` con `auth_request`. En web la app llama a la API con ruta relativa (mismo origen, vale para cualquier dominio del portal); el token va en `localStorage`.
 - Publicar la web: `./scripts/deploy-web.sh` (desde el Mac; compila y hace rsync a `app-web/`).
 - Actualizar: en el VPS, `cd /var/www/proyectos-src/nextepisode && ./deploy.sh` (git pull + `npm ci` + `pm2 startOrReload`).
@@ -90,6 +93,7 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAIL
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.8.0** — web pública sin login del portal (URL corta `/nextepisode`, cachés, noindex), atribución de TMDB y JustWatch, nota de privacidad en el registro.
 - **0.7.0** — filtro «Solo series de España» (país de producción) activado por defecto y recordado por usuario; 25 tests.
 - **0.6.0** — Novedades (estrenos recientes por plataforma/género) con selector Populares; temporadas, episodios y estado en la ficha con refresco semanal; temporadas opcionales al añadir una serie; 22 tests.
 - **0.5.0** — lista «Quiero ver» (guardar desde la ficha, pestaña en «Mis series», sale sola al puntuar); 19 tests.

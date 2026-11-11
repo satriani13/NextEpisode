@@ -5,7 +5,7 @@ import { FilmSlate } from '../icons';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { FadeUp, PressScale } from '../motion';
-import { Button, ErrorBanner, Field, GlassCard, Screen, T } from '../components/ui';
+import { Button, Credits, ErrorBanner, Field, GlassCard, Screen, T } from '../components/ui';
 import { colors, font, radius, web } from '../theme';
 
 export default function AuthScreen({ route, navigation }: any) {
@@ -54,7 +54,7 @@ export default function AuthScreen({ route, navigation }: any) {
                 {tab('login', 'Entrar')}
                 {tab('register', 'Crear cuenta')}
               </View>
-              <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" inputMode="email" />
+              <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" inputMode="email" helper={mode === 'register' ? 'Solo se usa para tu cuenta y para recuperar la contraseña.' : undefined} />
               {mode === 'register' && (
                 <>
                   <Field label="Usuario" value={username} onChangeText={setUsername} autoCapitalize="none" helper="3-24 caracteres: letras, números, punto, guion" />
@@ -72,6 +72,7 @@ export default function AuthScreen({ route, navigation }: any) {
               )}
             </GlassCard>
           </FadeUp>
+          <FadeUp delay={180} style={{ marginTop: 28 }}><Credits style={{ paddingHorizontal: 4 }} /></FadeUp>
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>

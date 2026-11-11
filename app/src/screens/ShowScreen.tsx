@@ -122,6 +122,7 @@ export default function ShowScreen({ route, navigation }: any) {
               ))}
             </View>
           ) : <T v="small" color={colors.muted} style={{ paddingHorizontal: 20 }}>Sin información de plataformas para tu país.</T>}
+          <T v="caption" color={colors.muted} style={{ paddingHorizontal: 20, marginTop: 10 }}>Datos de plataformas: JustWatch</T>
         </FadeUp>
 
         {show.overview ? (

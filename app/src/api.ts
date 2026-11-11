@@ -47,7 +47,13 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && token) onUnauthorized();
-  if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`);
+  if (!res.ok) {
+    // El servidor manda mensajes claros; si no llega ninguno (p. ej. lo corta un proxy) damos uno legible, nunca un código pelado.
+    const fallback = res.status === 429 ? 'Demasiados intentos seguidos. Espera unos minutos y vuelve a intentarlo.'
+      : res.status >= 502 && res.status <= 504 ? 'El servidor no responde ahora mismo. Inténtalo de nuevo en un momento.'
+      : `Algo ha fallado (código ${res.status}). Inténtalo de nuevo.`;
+    throw new Error(data.error ?? fallback);
+  }
   return data as T;
 }
 

@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { BookmarkSimple, TelevisionSimple, X } from '../icons';
 import { api, MyReview, WatchItem } from '../api';
 import { FadeUp, PressScale } from '../motion';
-import { Button, Card, Empty, ErrorBanner, GlassCard, ResultsSkeleton, Screen, ScreenHeader, ShowRow, Stars, T } from '../components/ui';
+import { Button, Card, Credits, Empty, ErrorBanner, GlassCard, ResultsSkeleton, Screen, ScreenHeader, ShowRow, Stars, T } from '../components/ui';
 import { colors, font, radius, TAB_SPACE } from '../theme';
 
 type Tab = 'seen' | 'want';
@@ -106,6 +106,7 @@ export default function MyShowsScreen({ navigation }: any) {
             })}
           </View>
         )}
+        <Credits style={{ marginTop: 32 }} />
       </ScrollView>
     </Screen>
   );

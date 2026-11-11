@@ -72,10 +72,13 @@ export function createApp({
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
   // ---- Auth ----
-  const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, skip: () => process.env.NODE_ENV === 'test' });
+  // Login: solo cuentan los intentos FALLIDOS (20 cada 15 min por IP). Así varios amigos tras la misma wifi
+  // no se bloquean entre sí por entrar bien. Registro: límite propio (10 altas por hora y por IP) contra el spam.
+  const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, skipSuccessfulRequests: true, skip: () => process.env.NODE_ENV === 'test' });
+  const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, skip: () => process.env.NODE_ENV === 'test' });
   const DUMMY_HASH = bcrypt.hashSync('dummy', 10);
 
-  app.post('/api/auth/register', loginLimiter, wrap((req, res) => {
+  app.post('/api/auth/register', registerLimiter, wrap((req, res) => {
     const { email, username, password, country = 'ES' } = req.body || {};
     if (!/^\S+@\S+\.\S+$/.test(email || '')) return bad(res, 'Email no válido');
     if (!/^[\w.-]{3,24}$/.test(username || '')) return bad(res, 'Usuario: 3-24 caracteres (letras, números, . _ -)');

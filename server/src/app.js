@@ -74,8 +74,16 @@ export function createApp({
   // ---- Auth ----
   // Login: solo cuentan los intentos FALLIDOS (20 cada 15 min por IP). Así varios amigos tras la misma wifi
   // no se bloquean entre sí por entrar bien. Registro: límite propio (10 altas por hora y por IP) contra el spam.
-  const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, skipSuccessfulRequests: true, skip: () => process.env.NODE_ENV === 'test' });
-  const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, skip: () => process.env.NODE_ENV === 'test' });
+  // Al pasarse del límite: mensaje claro en español con los minutos que faltan (nunca un "429" pelado).
+  const tooMany = (what) => (req, res) => {
+    const ms = req.rateLimit?.resetTime ? req.rateLimit.resetTime.getTime() - Date.now() : 15 * 60 * 1000;
+    const min = Math.max(1, Math.ceil(ms / 60000));
+    res.status(429).json({ error: `${what} Espera ${min} ${min === 1 ? 'minuto' : 'minutos'} y vuelve a intentarlo.`, retry_after_minutes: min });
+  };
+  const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, skipSuccessfulRequests: true, skip: () => process.env.NODE_ENV === 'test',
+    handler: tooMany('Demasiados intentos fallidos. Por seguridad, el acceso se bloquea temporalmente.') });
+  const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, skip: () => process.env.NODE_ENV === 'test',
+    handler: tooMany('Demasiados registros desde esta conexión.') });
   const DUMMY_HASH = bcrypt.hashSync('dummy', 10);
 
   app.post('/api/auth/register', registerLimiter, wrap((req, res) => {
@@ -105,7 +113,8 @@ export function createApp({
 
   // ---- Recuperación de contraseña por correo ----
   // Código de 8 caracteres enviado al email, válido 1 h, máx. 5 intentos, uno activo por usuario.
-  const resetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, skip: () => process.env.NODE_ENV === 'test' });
+  const resetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, skip: () => process.env.NODE_ENV === 'test',
+    handler: tooMany('Demasiadas solicitudes de recuperación de contraseña.') });
   const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O/1/I
   const RESET_TTL_MS = 60 * 60 * 1000;
   const RESET_COOLDOWN_MS = 60 * 1000;

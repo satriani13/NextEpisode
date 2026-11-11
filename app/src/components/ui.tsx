@@ -279,6 +279,16 @@ export function ResultsSkeleton() {
   );
 }
 
+// Atribución obligatoria al usar la API de TMDB y los datos de plataformas (JustWatch).
+export function Credits({ style }: { style?: StyleProp<ViewStyle> }) {
+  return (
+    <View style={[{ paddingHorizontal: 20, gap: 4 }, style]}>
+      <T v="caption" color={colors.muted}>Esta aplicación usa la API de TMDB pero no está avalada ni certificada por TMDB.</T>
+      <T v="caption" color={colors.muted}>Datos de plataformas de streaming: JustWatch.</T>
+    </View>
+  );
+}
+
 export function BackButton({ onPress }: { onPress: () => void }) {
   return (
     <PressScale onPress={onPress} accessibilityRole="button" accessibilityLabel="Volver" style={s.back}>

@@ -97,6 +97,14 @@ button{font:inherit;cursor:pointer}
 .card-ios{margin:6px 10px;background:#fff;border-radius:10px;padding:8px}
 .card-ios .nm{border-bottom:1px solid #ececf0;padding-bottom:6px;margin-bottom:6px;font-size:10px;font-weight:600}
 .card-ios .ur{font-size:8px;color:#888}
+.seg{display:flex;background:#1C1C26;border-radius:14px;padding:3px;margin:0 0 10px;gap:2px}
+.seg span{flex:1;text-align:center;padding:6px 0;font-size:9px;border-radius:11px;color:#BDBDCB}
+.seg .on{background:#2c2c3a;color:#fff;font-weight:600}
+.lb{font-size:8px;color:#BDBDCB;margin-top:6px}
+.fld.v{display:flex;align-items:center;padding:0 8px;font-size:9px;color:#F5F5F7;margin-top:2px}
+.chips{display:flex;gap:5px;margin:6px 0;flex-wrap:wrap}
+.chips span{padding:4px 8px;border-radius:99px;background:#1C1C26;font-size:8.5px;color:#BDBDCB}
+.chips .on{background:#FF6B3D;color:#1C0A04;font-weight:600}
 @media (max-width:480px){.phone{width:190px}.tab{padding:10px 16px}}
 </style>
 
@@ -114,7 +122,7 @@ button{font:inherit;cursor:pointer}
 
 <div class="wrap">
   <h1>Instalar NextEpisode en tu móvil</h1>
-  <p class="lead">Dura un minuto y no hace falta tienda de aplicaciones. NextEpisode queda como un icono más en tu pantalla de inicio y se abre a pantalla completa.</p>
+  <p class="lead">Dura un par de minutos y no hace falta tienda de aplicaciones. Primero la instalas en tu pantalla de inicio y después creas tu cuenta.</p>
   <div class="url"><code id="u">https://jpctools.es/proyectos/nextepisode/</code><button class="copy" id="cp" type="button">Copiar</button></div>
 
   <div class="tabs" role="tablist" aria-label="Tu móvil">
@@ -195,6 +203,50 @@ button{font:inherit;cursor:pointer}
       <li>Si no ves <b>Añadir a pantalla de inicio</b>, comprueba que estás en Safari y baja hasta el final de la lista del menú Compartir.</li>
       <li>El icono nuevo suele quedar en la última página de inicio o en la Biblioteca de apps.</li>
       <li>Para quitarlo, mantén pulsado el icono y elige <b>Eliminar app</b>.</li></ul></div>
+  </section>
+
+  <!-- REGISTRO (igual en los dos) -->
+  <section id="registro" aria-labelledby="h-reg">
+    <h2 class="sub" id="h-reg" style="margin-top:48px">Crea tu cuenta</h2>
+    <p class="need">Es igual en Android y en iPhone. Solo la primera vez. Tarda un minuto.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="phone"><div class="scr"><div class="sb"><span>9:41</span><span>●●●</span></div>
+          <div class="app-login" style="padding-top:26px"><div class="ic"><svg class="ne"><use href="#ne"/></svg></div><h4>NextEpisode</h4>
+          <div class="seg"><span>Entrar</span><span class="hl on">Crear cuenta</span></div>
+          <div class="fld"></div><div class="fld"></div><div class="fld"></div><div class="cta"></div></div></div></div>
+        <div class="txt"><h3><span>1</span>Crear cuenta</h3><p>Abre NextEpisode desde su icono. En la pantalla de acceso, toca la pestaña <b>Crear cuenta</b>.</p></div>
+      </div>
+      <div class="step">
+        <div class="phone"><div class="scr"><div class="sb"><span>9:41</span><span>●●●</span></div>
+          <div class="app-login" style="padding-top:18px;text-align:left"><div class="seg"><span>Entrar</span><span class="on">Crear cuenta</span></div>
+          <div class="lb">Email</div><div class="fld v">lucia@ejemplo.com</div>
+          <div class="lb">Usuario</div><div class="fld v">lucia.series</div>
+          <div class="lb">País</div><div class="fld v">ES</div>
+          <div class="lb">Contraseña</div><div class="fld v">••••••••••</div></div></div></div>
+        <div class="txt"><h3><span>2</span>Rellena los datos</h3><p><b>Email</b> real, porque sirve para recuperar la contraseña. <b>Usuario</b> de 3 a 24 caracteres. <b>País</b> en 2 letras (<b>ES</b> para España). <b>Contraseña</b> de 8 o más.</p></div>
+      </div>
+      <div class="step">
+        <div class="phone"><div class="scr"><div class="sb"><span>9:41</span><span>●●●</span></div>
+          <div class="app-login" style="padding-top:18px;text-align:left"><div class="seg"><span>Entrar</span><span class="on">Crear cuenta</span></div>
+          <div class="fld v" style="margin-top:46px">lucia@ejemplo.com</div><div class="fld v">lucia.series</div><div class="fld v">ES</div><div class="fld v">••••••••••</div>
+          <div class="cta hl" style="display:grid;place-items:center;color:#1C0A04;font-weight:700;font-size:10px">Crear cuenta</div></div></div></div>
+        <div class="txt"><h3><span>3</span>Pulsa Crear cuenta</h3><p>Toca el botón naranja <b>Crear cuenta</b>. Entras directamente, sin confirmar por correo.</p></div>
+      </div>
+      <div class="step">
+        <div class="phone"><div class="scr"><div class="sb"><span>9:41</span><span>●●●</span></div>
+          <div style="padding:14px 14px 0"><div style="font-family:'Outfit',system-ui,sans-serif;font-size:15px;font-weight:700">Explorar</div>
+          <div class="fld" style="margin:8px 0">Busca una serie…</div>
+          <div class="chips"><span class="on">Novedades</span><span>Populares</span></div>
+          <div class="chips"><span>Netflix</span><span>Prime Video</span><span>Disney+</span></div>
+          <div class="chips"><span>Acción</span><span>Comedia</span><span>Drama</span></div></div></div></div>
+        <div class="txt"><h3><span>4</span>Ya puedes usarla</h3><p>Llegas a <b>Explorar</b>. Elige tus plataformas y géneros, busca una serie y <b>puntúala</b>. <span class="ok">La sesión queda abierta.</span></p></div>
+      </div>
+    </div>
+    <div class="note"><h3>Si algo no sale</h3><ul>
+      <li>«Email o usuario ya registrado»: prueba con otro usuario o entra con <b>Entrar</b> si ya te registraste.</li>
+      <li>Si olvidas la contraseña, en <b>Entrar</b> pulsa <b>¿Has olvidado tu contraseña?</b>: te llega un código por correo.</li>
+      <li>Si ves «Demasiados intentos», espera los minutos que indica y vuelve a probar.</li></ul></div>
   </section>
 </div>
 

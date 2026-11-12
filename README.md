@@ -58,6 +58,9 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 - **Sesiones:** cada usuario tiene `token_version`; al cambiarse su contraseña (por el admin o por recuperación) sus tokens anteriores dejan de valer.
 - **Recuperar contraseña:** «¿Has olvidado tu contraseña?» en el login → código por correo → código + contraseña nueva. Solo se guarda el hash SHA-256 del código.
 
+## Instalar en el móvil
+Guía visual para Android (Chrome) e iPhone (Safari): [`docs/manual-instalacion.html`](docs/manual-instalacion.html). La web incluye `manifest.json` e iconos en `app/public/`.
+
 ## Despliegue (VPS)
 - Código en `/var/www/proyectos-src/nextepisode/` (clon HTTPS del repo público). PM2 `nextepisode-api`, **puerto 3025**, solo `127.0.0.1`,
   Node 22 por `interpreter` (`server/ecosystem.config.cjs`; PM2 en sí vive en el Node 20 de nvm).
@@ -93,6 +96,7 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAIL
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.8.3** — la web se puede instalar en la pantalla de inicio de Android e iPhone: icono propio (antes el genérico de Expo), `manifest.json` (modo standalone, rutas relativas al subpath) y `apple-touch-icon`. Manual paso a paso con pantallas en `docs/manual-instalacion.html`.
 - **0.8.2** — al bloquearse por demasiados intentos (login, registro, recuperación) se muestra un mensaje claro con los minutos de espera en lugar de «Error 429»; respaldo legible en la app para 429 y errores de servidor; 28 tests.
 - **0.8.1** — el límite de login solo cuenta los intentos fallidos (antes también los correctos y compartía contador con el registro, que podía bloquear a usuarios legítimos tras la misma IP); registro con límite propio.
 - **0.8.0** — atribución de TMDB y JustWatch, nota de privacidad en el registro y `noindex`. La app se abre sin login desde el portal (`public=1`); la publicación directa por nginx se revirtió.

@@ -1,0 +1,217 @@
+<title>Instalar NextEpisode en el móvil</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Geist:wght@400;500;600&display=swap">
+<style>
+/* Layout: cabecera corta, selector Android/iPhone y una fila de pantallas de móvil con su paso debajo. */
+:root{
+  --bg:#F6F4F3; --surface:#FFFFFF; --fg:#1B1718; --muted:#6B6366; --line:#E4DEDC;
+  --accent:#D9481C; --accent-soft:#FDE9E1; --ok:#1E7A4D;
+  --display:'Outfit','Avenir Next',system-ui,sans-serif; --body:'Geist',system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E0D12; --surface:#17161D; --fg:#F3F1F2; --muted:#A39DA3; --line:#2A2830;
+  --accent:#FF7A4D; --accent-soft:#2A1812; --ok:#6FD6A0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E0D12; --surface:#17161D; --fg:#F3F1F2; --muted:#A39DA3; --line:#2A2830;
+  --accent:#FF7A4D; --accent-soft:#2A1812; --ok:#6FD6A0; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55;
+  padding-block:32px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.1;font-weight:700;letter-spacing:-.02em}
+.lead{color:var(--muted);max-width:60ch;margin:12px 0 0}
+.url{display:inline-flex;align-items:center;gap:10px;margin-top:20px;padding:10px 12px 10px 16px;border:1px solid var(--line);background:var(--surface);border-radius:12px;max-width:100%}
+.url code{font-family:ui-monospace,Menlo,monospace;font-size:14px;overflow-wrap:anywhere}
+button{font:inherit;cursor:pointer}
+.copy{border:0;background:var(--accent);color:#fff;font-weight:600;padding:7px 14px;border-radius:8px;font-size:14px}
+.copy:focus-visible,.tab:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.tabs{display:inline-flex;gap:4px;margin-top:32px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.tab{border:0;background:transparent;color:var(--muted);font-weight:600;padding:10px 22px;border-radius:10px;font-size:16px}
+.tab[aria-selected="true"]{background:var(--accent);color:#fff}
+.sub{margin:28px 0 4px;font-size:22px;font-weight:600}
+.need{color:var(--muted);margin:0 0 8px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:28px 20px;margin-top:24px}
+.step{display:flex;flex-direction:column;align-items:center;gap:14px;min-width:0}
+.step .txt{width:100%;max-width:230px}
+.step h3{font-size:18px;font-weight:600;display:flex;gap:10px;align-items:baseline}
+.step h3 span{flex:none;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:14px}
+.step p{margin:6px 0 0;color:var(--muted);font-size:15px}
+.step b{color:var(--fg);font-weight:600}
+.note{margin-top:36px;padding:16px 18px;background:var(--accent-soft);border-radius:14px;max-width:70ch}
+.note h3{font-size:17px;margin-bottom:6px}
+.note ul{margin:0;padding-left:20px}.note li{margin:4px 0}
+.ok{color:var(--ok);font-weight:600}
+[hidden]{display:none!important}
+
+/* ---- Móvil ilustrado (colores propios: es un dibujo de pantalla) ---- */
+.phone{width:200px;aspect-ratio:9/18.5;background:#0b0b0f;border-radius:30px;padding:7px;box-shadow:0 18px 36px -14px rgba(20,10,10,.45),inset 0 0 0 1.5px #3a3a44;flex:none}
+.scr{position:relative;width:100%;height:100%;border-radius:24px;overflow:hidden;background:#0B0B10;color:#F5F5F7;font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:10px}
+.scr.light{background:#F2F2F7;color:#111}
+.sb{display:flex;justify-content:space-between;padding:7px 14px 0;font-size:9px;font-weight:600}
+.hl{position:relative;z-index:2;box-shadow:0 0 0 2px #FF7A4D,0 0 0 6px rgba(255,122,77,.35);border-radius:8px;animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 2px #FF7A4D,0 0 0 10px rgba(255,122,77,0)}}
+@media (prefers-reduced-motion:reduce){.hl{animation:none}}
+.ne{width:100%;height:100%;display:block}
+/* Android: Chrome */
+.chrome-bar{display:flex;align-items:center;gap:6px;margin:6px 8px;padding:5px 6px;background:#202027;border-radius:14px}
+.chrome-bar .u{flex:1;font-size:8.5px;color:#cfcfd8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dots{width:18px;height:18px;display:grid;place-items:center;font-size:14px;font-weight:700;line-height:1;color:#fff}
+.app-login{padding:34px 18px;text-align:center}
+.app-login .ic{width:44px;height:44px;margin:0 auto 10px;border-radius:12px;overflow:hidden}
+.app-login h4{margin:0 0 12px;font-size:14px;font-family:'Outfit',system-ui,sans-serif}
+.fld{height:22px;border-radius:7px;background:#1C1C26;margin:6px 0}
+.cta{height:24px;border-radius:12px;background:#FF6B3D;margin-top:10px}
+.menu{position:absolute;right:6px;top:34px;width:150px;background:#2b2b33;border-radius:12px;padding:5px 0;box-shadow:0 8px 20px rgba(0,0,0,.5);z-index:3}
+.menu div{padding:6px 12px;font-size:9px;color:#e6e6ee;white-space:nowrap}
+.menu .hl{margin:2px 5px;padding:6px 7px;background:#3a3a46;font-weight:600;border-radius:7px}
+.dim{opacity:.35}
+.dlg{position:absolute;left:14px;right:14px;top:34%;background:#2b2b33;border-radius:18px;padding:14px;z-index:3;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.dlg h5{margin:0 0 10px;font-size:11px;font-weight:600}
+.row{display:flex;align-items:center;gap:8px}
+.row .ic{width:28px;height:28px;border-radius:8px;overflow:hidden;flex:none}
+.btns{display:flex;justify-content:flex-end;gap:14px;margin-top:14px;font-size:10px;font-weight:600;color:#9db8ff;align-items:center}
+.btns .hl{padding:4px 8px;color:#fff;background:#3b6cf0}
+.veil{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:1}
+/* Pantalla de inicio */
+.home{height:100%;padding:34px 12px 0;background:linear-gradient(160deg,#2a4a6b,#5d3a73 55%,#a4506a)}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 6px;justify-items:center}
+.app{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:7px;color:#fff;width:100%}
+.app i{display:block;width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.28)}
+.app i.c1{background:#4f8ef7}.app i.c2{background:#35c07a}.app i.c3{background:#f0b440}.app i.c4{background:#e8575f}
+.app i.ne-i{background:none;overflow:hidden}
+/* iPhone: Safari */
+.safari-bot{position:absolute;left:0;right:0;bottom:0;padding:6px 8px 10px;background:#ECECF1;z-index:1}
+.safari-bot .u{background:#fff;border-radius:9px;text-align:center;padding:5px;font-size:8.5px;color:#222}
+.tools{display:flex;justify-content:space-around;align-items:center;margin-top:8px;color:#2f6df0;font-size:15px;height:24px}
+.tools .hl{width:28px;height:26px;display:grid;place-items:center;background:#fff}
+.sheet{position:absolute;left:0;right:0;bottom:0;top:30%;background:#F2F2F7;border-radius:18px 18px 0 0;padding:10px;z-index:3;color:#111}
+.sheet .head{display:flex;gap:8px;align-items:center;padding-bottom:8px;border-bottom:1px solid #d6d6dc;margin-bottom:8px}
+.sheet .head .ic{width:24px;height:24px;border-radius:7px;overflow:hidden;flex:none}
+.list{background:#fff;border-radius:10px}
+.list div{display:flex;justify-content:space-between;padding:7px 9px;font-size:9px;border-bottom:1px solid #ececf0}
+.list div:last-child{border:0}
+.ios-dlg-top{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 6px;font-size:10px;color:#2f6df0}
+.ios-dlg-top b{font-weight:600;color:#111}
+.ios-dlg-top .hl{padding:3px 7px;background:#fff;color:#2f6df0;font-weight:600}
+.card-ios{margin:6px 10px;background:#fff;border-radius:10px;padding:8px}
+.card-ios .nm{border-bottom:1px solid #ececf0;padding-bottom:6px;margin-bottom:6px;font-size:10px;font-weight:600}
+.card-ios .ur{font-size:8px;color:#888}
+@media (max-width:480px){.phone{width:190px}.tab{padding:10px 16px}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="g1" cx="50%" cy="46%" r="55%"><stop offset="0" stop-color="#FF6B3D" stop-opacity=".38"/><stop offset="1" stop-color="#FF6B3D" stop-opacity="0"/></radialGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF9A5C"/><stop offset="1" stop-color="#FF4F6D"/></linearGradient>
+    <symbol id="ne" viewBox="0 0 1024 1024">
+      <rect width="1024" height="1024" fill="#0B0B10"/><rect width="1024" height="1024" fill="url(#g1)"/>
+      <path d="M400 296 L400 728 Q400 770 438 750 L748 538 Q782 512 748 486 L438 274 Q400 254 400 296 Z" fill="url(#g2)" stroke="url(#g2)" stroke-width="40" stroke-linejoin="round" transform="translate(-24 0)"/>
+      <path d="M742 250 l16 44 44 16 -44 16 -16 44 -16 -44 -44 -16 44 -16 z" fill="#F2B84B"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <h1>Instalar NextEpisode en tu móvil</h1>
+  <p class="lead">Dura un minuto y no hace falta tienda de aplicaciones. NextEpisode queda como un icono más en tu pantalla de inicio y se abre a pantalla completa.</p>
+  <div class="url"><code id="u">https://jpctools.es/proyectos/nextepisode/</code><button class="copy" id="cp" type="button">Copiar</button></div>
+
+  <div class="tabs" role="tablist" aria-label="Tu móvil">
+    <button class="tab" role="tab" id="t-android" aria-selected="true" aria-controls="p-android" type="button">Android</button>
+    <button class="tab" role="tab" id="t-ios" aria-selected="false" aria-controls="p-ios" type="button">iPhone</button>
+  </div>
+
+  <!-- ANDROID -->
+  <section id="p-android" role="tabpanel" aria-labelledby="t-android">
+    <h2 class="sub">Android con Chrome</h2>
+    <p class="need">Usa Chrome. Con Samsung Internet o Firefox los nombres de los botones cambian un poco, pero el camino es el mismo.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="phone"><div class="scr"><div class="sb"><span>9:41</span><span>●●●</span></div>
+          <div class="chrome-bar"><span class="u">jpctools.es/proyectos/nextepisode/</span><span class="dots hl">⋮</span></div>
+          <div class="app-login"><div class="ic"><svg class="ne"><use href="#ne"/></svg></div><h4>NextEpisode</h4><div class="fld"></div><div class="fld"></div><div class="cta"></div></div></div></div>
+        <div class="txt"><h3><span>1</span>Abre la web</h3><p>Pega el enlace en <b>Chrome</b> y entra. Pulsa los <b>tres puntos</b> de arriba a la derecha.</p></div>
+      </div>
+      <div class="step">
+        <div class="phone"><div class="scr"><div class="sb"><span>9:41</span><span>●●●</span></div>
+          <div class="chrome-bar"><span class="u">jpctools.es/proyectos/nextepisode/</span><span class="dots">⋮</span></div>
+          <div class="menu"><div>Nueva pestaña</div><div>Nueva pestaña de incógnito</div><div>Historial</div><div>Descargas</div><div class="hl">Instalar aplicación</div><div>Compartir…</div></div>
+          <div class="app-login dim"><div class="ic"><svg class="ne"><use href="#ne"/></svg></div></div></div></div>
+        <div class="txt"><h3><span>2</span>Elige instalar</h3><p>Pulsa <b>Instalar aplicación</b>. Si no sale, busca <b>Añadir a la pantalla de inicio</b>.</p></div>
+      </div>
+      <div class="step">
+        <div class="phone"><div class="scr"><div class="veil"></div><div class="sb" style="position:relative;z-index:2"><span>9:41</span><span>●●●</span></div>
+          <div class="dlg"><h5>Instalar aplicación</h5><div class="row"><div class="ic"><svg class="ne"><use href="#ne"/></svg></div><div><b style="font-size:10px">NextEpisode</b><div style="font-size:8px;color:#b4b4c0">jpctools.es</div></div></div>
+          <div class="btns"><span>Cancelar</span><span class="hl">Instalar</span></div></div></div></div>
+        <div class="txt"><h3><span>3</span>Confirma</h3><p>Pulsa <b>Instalar</b>. Si aparece otro aviso que dice <b>Añadir</b>, vuelve a pulsarlo.</p></div>
+      </div>
+      <div class="step">
+        <div class="phone"><div class="scr"><div class="home"><div class="grid4">
+          <div class="app"><i class="c1"></i>Fotos</div><div class="app"><i class="c2"></i>Mensajes</div><div class="app"><i class="c3"></i>Mapas</div><div class="app"><i class="c4"></i>Correo</div>
+          <div class="app"><i class="c3"></i>Música</div><div class="app hl" style="padding:3px 0"><i class="ne-i"><svg class="ne"><use href="#ne"/></svg></i>NextEpisode</div><div class="app"><i class="c1"></i>Reloj</div><div class="app"><i class="c2"></i>Notas</div>
+          </div></div></div></div>
+        <div class="txt"><h3><span>4</span>Ya está</h3><p>El icono de <b>NextEpisode</b> aparece en tu pantalla de inicio. <span class="ok">Púlsalo y entra.</span></p></div>
+      </div>
+    </div>
+    <div class="note"><h3>Si algo no sale</h3><ul>
+      <li>Tarda unos segundos en aparecer el icono. Si no lo ves, desliza hacia arriba para abrir todas las apps.</li>
+      <li>Si el icono sale como un acceso directo con la barra del navegador, vuelve a instalarla desde Chrome y no desde otro navegador.</li>
+      <li>Para quitarla, mantén pulsado el icono y elige <b>Desinstalar</b> o <b>Quitar</b>.</li></ul></div>
+  </section>
+
+  <!-- IPHONE -->
+  <section id="p-ios" role="tabpanel" aria-labelledby="t-ios" hidden>
+    <h2 class="sub">iPhone con Safari</h2>
+    <p class="need">Hazlo desde Safari. Desde otros navegadores a veces no aparece la opción.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="phone"><div class="scr light"><div class="sb"><span>9:41</span><span>●●●</span></div>
+          <div style="background:#0B0B10;color:#F5F5F7;margin:6px 0 0;height:calc(100% - 94px)"><div class="app-login"><div class="ic"><svg class="ne"><use href="#ne"/></svg></div><h4>NextEpisode</h4><div class="fld"></div><div class="fld"></div><div class="cta"></div></div></div>
+          <div class="safari-bot"><div class="u">jpctools.es</div><div class="tools"><span>‹</span><span>›</span><span class="hl"><svg width="14" height="16" viewBox="0 0 14 16" fill="none" stroke="#2f6df0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1v9M4 4l3-3 3 3M2 7v7h10V7"/></svg></span><span>▢</span><span>⧉</span></div></div></div></div>
+        <div class="txt"><h3><span>1</span>Abre y comparte</h3><p>Entra en la web con Safari y pulsa el botón <b>Compartir</b>, el cuadrado con una flecha hacia arriba.</p></div>
+      </div>
+      <div class="step">
+        <div class="phone"><div class="scr light"><div class="veil" style="background:rgba(0,0,0,.35)"></div>
+          <div class="sheet"><div class="head"><div class="ic"><svg class="ne"><use href="#ne"/></svg></div><div><b style="font-size:10px">NextEpisode</b><div style="font-size:8px;color:#777">jpctools.es</div></div></div>
+          <div class="list"><div>Copiar<span>⧉</span></div><div>Añadir a marcadores<span>☆</span></div><div class="hl" style="background:#fff;border-radius:6px">Añadir a pantalla de inicio<span>＋</span></div><div>Buscar en la página<span>⌕</span></div></div></div></div></div>
+        <div class="txt"><h3><span>2</span>Añadir a inicio</h3><p>Desliza la lista hacia arriba hasta ver <b>Añadir a pantalla de inicio</b> y púlsala.</p></div>
+      </div>
+      <div class="step">
+        <div class="phone"><div class="scr light"><div class="ios-dlg-top"><span>Cancelar</span><b>Añadir a inicio</b><span class="hl">Añadir</span></div>
+          <div class="card-ios"><div class="row nm"><div class="ic"><svg class="ne"><use href="#ne"/></svg></div>NextEpisode</div><div class="ur">https://jpctools.es/proyectos/nextepisode/</div></div>
+          <p style="margin:8px 12px;font-size:8px;color:#777;line-height:1.4">Se añadirá un icono a tu pantalla de inicio para que puedas acceder rápidamente a este sitio web.</p></div></div>
+        <div class="txt"><h3><span>3</span>Pulsa Añadir</h3><p>Deja el nombre <b>NextEpisode</b> y toca <b>Añadir</b>, arriba a la derecha.</p></div>
+      </div>
+      <div class="step">
+        <div class="phone"><div class="scr"><div class="home"><div class="grid4">
+          <div class="app"><i class="c1"></i>Fotos</div><div class="app"><i class="c2"></i>Mensajes</div><div class="app"><i class="c3"></i>Mapas</div><div class="app"><i class="c4"></i>Correo</div>
+          <div class="app"><i class="c3"></i>Música</div><div class="app"><i class="c1"></i>Reloj</div><div class="app"><i class="c2"></i>Notas</div><div class="app hl" style="padding:3px 0"><i class="ne-i"><svg class="ne"><use href="#ne"/></svg></i>NextEpisode</div>
+          </div></div></div></div>
+        <div class="txt"><h3><span>4</span>Ya está</h3><p>El icono aparece al final de tu pantalla de inicio. <span class="ok">Púlsalo y entra.</span></p></div>
+      </div>
+    </div>
+    <div class="note"><h3>Si algo no sale</h3><ul>
+      <li>Si no ves <b>Añadir a pantalla de inicio</b>, comprueba que estás en Safari y baja hasta el final de la lista del menú Compartir.</li>
+      <li>El icono nuevo suele quedar en la última página de inicio o en la Biblioteca de apps.</li>
+      <li>Para quitarlo, mantén pulsado el icono y elige <b>Eliminar app</b>.</li></ul></div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var tabs={android:document.getElementById('t-android'),ios:document.getElementById('t-ios')};
+  var panels={android:document.getElementById('p-android'),ios:document.getElementById('p-ios')};
+  function show(k){for(var n in tabs){var on=n===k;tabs[n].setAttribute('aria-selected',on);panels[n].hidden=!on}}
+  tabs.android.onclick=function(){show('android')};tabs.ios.onclick=function(){show('ios')};
+  var h=(location.hash||'').replace('#','');
+  show(h==='ios'||h==='android'?h:(/iPhone|iPad|iPod/i.test(navigator.userAgent)?'ios':'android'));
+  var cp=document.getElementById('cp');
+  cp.onclick=function(){
+    var t=document.getElementById('u').textContent;
+    function done(){cp.textContent='Copiado';setTimeout(function(){cp.textContent='Copiar'},1600)}
+    try{navigator.clipboard.writeText(t).then(done,function(){sel()})}catch(e){sel()}
+    function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('u'));var s=getSelection();s.removeAllRanges();s.addRange(r)}
+  };
+})();
+</script>

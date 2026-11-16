@@ -137,6 +137,24 @@ export default function ShowScreen({ route, navigation }: any) {
           </FadeUp>
         ) : null}
 
+        {show.cast?.length ? (
+          <FadeUp delay={230} style={{ marginTop: 28 }}>
+            <SectionLabel>Reparto</SectionLabel>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14 }} accessibilityLabel="Reparto principal">
+              {show.cast.map((p, i) => (
+                <View key={`${p.name}-${i}`} style={s.person} accessible accessibilityLabel={p.character ? `${p.name}, como ${p.character}` : p.name}>
+                  {p.photo_url
+                    ? <Image source={{ uri: p.photo_url }} style={s.photo} accessibilityIgnoresInvertColors />
+                    : <View style={[s.photo, s.photoEmpty]}><T v="heading" color={colors.muted}>{p.name.trim().charAt(0).toUpperCase()}</T></View>}
+                  <T v="caption" numberOfLines={2} style={{ fontFamily: font.bodySemi, textAlign: 'center', marginTop: 8 }}>{p.name}</T>
+                  {p.character ? <T v="caption" color={colors.muted} numberOfLines={2} style={{ textAlign: 'center' }}>{p.character}</T> : null}
+                </View>
+              ))}
+            </ScrollView>
+            <T v="caption" color={colors.muted} style={{ paddingHorizontal: 20, marginTop: 10 }}>Datos del reparto: TMDB</T>
+          </FadeUp>
+        ) : null}
+
         <FadeUp delay={260} style={{ paddingHorizontal: 20, marginTop: 28 }}>
           <GlassCard>
             <T v="heading">{show.my_review ? 'Tu opinión' : '¿Qué te ha parecido?'}</T>
@@ -183,6 +201,9 @@ const s = StyleSheet.create({
   watch: { alignSelf: 'flex-start', minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },
   watchOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
   prov: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 12, paddingRight: 16, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },
+  person: { width: 84, alignItems: 'center' },
+  photo: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.glassHi },
+  photoEmpty: { alignItems: 'center', justifyContent: 'center' },
   provLogo: { width: 26, height: 26, borderRadius: 7 },
   review: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.glassHi, alignItems: 'center', justifyContent: 'center' },

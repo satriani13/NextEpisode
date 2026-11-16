@@ -19,7 +19,7 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 
 ### Modelo de datos (SQLite)
 `users` · `shows` (tmdb_id único opcional, `source` tmdb|user) · `show_providers` (caché 24 h por país) ·
-`reviews` (1–5 estrellas + texto, única por usuario/serie; reeditable) · `user_prefs` (géneros, plataformas y origen elegidos) · `watchlist` (usuario + serie: «Quiero ver») · `shows.seasons/episodes/status/details_at` (de TMDB; se refrescan al abrir la ficha como mucho cada 7 días; en series manuales, temporadas opcionales) · `shows.backdrop_url` (imagen ancha para las fichas).
+`reviews` (1–5 estrellas + texto, única por usuario/serie; reeditable) · `user_prefs` (géneros, plataformas y origen elegidos) · `watchlist` (usuario + serie: «Quiero ver») · `shows.seasons/episodes/status/cast_json/details_at` (de TMDB, con el reparto como JSON; se refrescan al abrir la ficha como mucho cada 7 días; en series manuales, temporadas opcionales) · `shows.backdrop_url` (imagen ancha para las fichas).
 
 ### API (`/api`, todo con `Authorization: Bearer` salvo auth y `/health`)
 | Método | Ruta | Descripción |
@@ -34,7 +34,7 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 | GET | `/discover?genres=&providers=&sort=&origin=` | Explorar sin texto: por género(s) y/o plataforma(s) (varios = «o»). `sort=new` (lo usa la app): estrenos más recientes de lo que hay en streaming en el país (primer estreno ≤ hoy, ≥5 votos), en un único orden por fecha; lo ya importado lleva `show_id` y su nota. `sort=popular` (por defecto en la API): más populares; lo ya importado sale como `catalog`. `origin=country`: solo producciones del país del usuario (`with_origin_country` de TMDB); por defecto, de todo el mundo. Con país o plataformas manda TMDB y el catálogo propio solo aporta lo ya importado |
 | GET/PUT | `/me/prefs` | Géneros, plataformas y origen (`country` por defecto / `all`) del usuario; se recuerdan entre sesiones y dispositivos. Un PUT sin `origin` conserva el actual |
 | POST | `/shows` | Importa de TMDB (`tmdb_id`) o crea manualmente (`title`, `year`…) |
-| GET | `/shows/:id` | Ficha, media, plataformas del país, tu reseña |
+| GET | `/shows/:id` | Ficha, media, reparto principal (`cast`), plataformas del país, tu reseña |
 | GET/POST | `/shows/:id/reviews` | Listar / crear-editar tu reseña |
 | GET | `/me/reviews` | Tus series puntuadas |
 | GET | `/me/watchlist` | Tu lista «Quiero ver» (más reciente primero) |
@@ -45,6 +45,7 @@ server/  Node ≥22.13 · Express · node:sqlite (builtin) · JWT + bcryptjs
 - **Formato:** web app con aspecto de móvil. En pantallas anchas se muestra dentro de un marco de móvil centrado; en un móvil o ventana estrecha ocupa toda la pantalla (`src/components/PhoneFrame.tsx`).
 - **Novedades / Populares:** selector en el inicio (por defecto Novedades): los estrenos más recientes de tus plataformas y géneros, con su fecha. Limitación: ordena por *primer estreno*; una temporada nueva de una serie antigua no aparece como novedad.
 - **Solo series de tu país:** chip activado por defecto («Solo series de España»). Sin él, Novedades incluye producciones de cualquier país que estén en streaming en España (la mayoría de los estrenos recientes son extranjeras). Se recuerda por usuario. No afecta a la búsqueda por título.
+- **Reparto:** la ficha muestra los 12 intérpretes principales (foto, nombre y personaje) en un carrusel horizontal; viene de TMDB (`aggregate_credits`), se guarda con la ficha y se refresca igual (7 días). Series manuales: sin sección. Atribución «Datos del reparto: TMDB».
 - **Temporadas:** la ficha muestra temporadas, episodios y estado (en emisión, finalizada…); las tarjetas, «N temp.» cuando se conoce.
 - **Quiero ver:** botón en la ficha de cada serie (cambio instantáneo, se deshace si falla) y pestaña «Quiero ver» en «Mis series» con contador y «Quitar de la lista». La lista es privada y, al puntuar una serie, sale sola de ella (ya la has visto).
 - **Inicio = Explorar:** ya no está en blanco. Sugiere **plataformas** (con logo) y **géneros** como chips multi-selección, recordados por usuario; con ellos descubre series (destacada + rejilla). Si escribes un título, manda el título y los géneros elegidos suben lo que encaja.
@@ -96,6 +97,7 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAIL
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.9.0** — reparto en la ficha de la serie (12 intérpretes con foto y personaje, carrusel horizontal; series antiguas lo rellenan al abrirse); 30 tests.
 - **0.8.3** — la web se puede instalar en la pantalla de inicio de Android e iPhone: icono propio (antes el genérico de Expo), `manifest.json` (modo standalone, rutas relativas al subpath) y `apple-touch-icon`. Manual paso a paso con pantallas en `docs/manual-instalacion.html`.
 - **0.8.2** — al bloquearse por demasiados intentos (login, registro, recuperación) se muestra un mensaje claro con los minutos de espera en lugar de «Error 429»; respaldo legible en la app para 429 y errores de servidor; 28 tests.
 - **0.8.1** — el límite de login solo cuenta los intentos fallidos (antes también los correctos y compartía contador con el registro, que podía bloquear a usuarios legítimos tras la misma IP); registro con límite propio.

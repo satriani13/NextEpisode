@@ -32,6 +32,12 @@ export function createTmdb({ apiKey = process.env.TMDB_API_KEY, fetchImpl = fetc
     if (!res.ok) throw new Error(`TMDB ${res.status}`);
     return res.json();
   }
+  // Reparto principal (los 12 con más episodios, que TMDB ya devuelve ordenados). Foto pequeña y personaje principal.
+  const mapCast = (c) => (c?.cast || []).slice(0, 12).map((p) => ({
+    name: p.name,
+    character: p.roles?.[0]?.character || null,
+    photo_url: p.profile_path ? `${IMG}/w185${p.profile_path}` : null,
+  }));
   const mapShow = (r) => ({
     tmdb_id: r.id,
     title: r.name,
@@ -55,8 +61,10 @@ export function createTmdb({ apiKey = process.env.TMDB_API_KEY, fetchImpl = fetc
       const data = await get('/search/tv', { query: q });
       return data.results.slice(0, 12).map(mapShow);
     },
+    // Ficha completa: temporadas/estado y reparto principal (aggregate_credits suma los episodios de cada actor).
     async details(tmdbId) {
-      return mapShow(await get(`/tv/${tmdbId}`));
+      const r = await get(`/tv/${tmdbId}`, { append_to_response: 'aggregate_credits' });
+      return { ...mapShow(r), cast: mapCast(r.aggregate_credits) };
     },
     // Descubrir por género(s) y plataforma(s): varios géneros/plataformas = "o" (separados por |).
     // `sort`: 'new' = estrenos más recientes de lo que se puede ver en streaming en el país; 'popular' = más populares.

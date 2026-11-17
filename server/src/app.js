@@ -350,7 +350,7 @@ export function createApp({
   app.get('/api/me/watchlist', auth, (req, res) => {
     res.json(db.prepare(`SELECT s.id AS show_id, s.title, s.year, s.poster_url, s.genres, w.created_at AS added_at,
         (SELECT ROUND(AVG(rating), 2) FROM reviews WHERE show_id = s.id) AS avg_rating
-      FROM watchlist w JOIN shows s ON s.id = w.show_id WHERE w.user_id = ? ORDER BY w.created_at DESC, s.id DESC`).all(req.user.id));
+      FROM watchlist w JOIN shows s ON s.id = w.show_id WHERE w.user_id = ? ORDER BY w.created_at DESC, w.rowid DESC`).all(req.user.id));
   });
   app.put('/api/me/watchlist/:id', auth, (req, res) => {
     if (!db.prepare('SELECT 1 FROM shows WHERE id = ?').get(req.params.id)) return bad(res, 'Serie no encontrada', 404);
@@ -365,7 +365,7 @@ export function createApp({
 
   app.get('/api/me/reviews', auth, (req, res) => {
     res.json(db.prepare(`SELECT s.id AS show_id, s.title, s.year, s.poster_url, r.rating, r.body, r.updated_at
-      FROM reviews r JOIN shows s ON s.id = r.show_id WHERE r.user_id = ? ORDER BY r.updated_at DESC`).all(req.user.id));
+      FROM reviews r JOIN shows s ON s.id = r.show_id WHERE r.user_id = ? ORDER BY r.updated_at DESC, r.id DESC`).all(req.user.id));
   });
 
   // ---- Recomendaciones ----

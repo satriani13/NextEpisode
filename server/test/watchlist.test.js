@@ -62,3 +62,15 @@ test('quiero ver: puntuar una serie la saca de la lista y ya no se puede guardar
   assert.equal((await call('PUT', `/api/me/watchlist/${id}`, null, t)).status, 409);
   close();
 });
+
+test('Vistas y Quiero ver: orden de más reciente a menos, también dentro del mismo segundo', async () => {
+  const { call, reg, close } = await setup();
+  const t = await reg('ana');
+  const ids = [];
+  for (const [title, year] of [['Uno', 2001], ['Dos', 2002], ['Tres', 2003]]) ids.push((await call('POST', '/api/shows', { title, year }, t)).body.id);
+  for (const i of [2, 0, 1]) await call('PUT', `/api/me/watchlist/${ids[i]}`, null, t);
+  assert.deepEqual((await call('GET', '/api/me/watchlist', null, t)).body.map((s) => s.title), ['Dos', 'Uno', 'Tres']);
+  for (const i of [1, 2, 0]) await call('POST', `/api/shows/${ids[i]}/reviews`, { rating: 4, body: '' }, t);
+  assert.deepEqual((await call('GET', '/api/me/reviews', null, t)).body.map((s) => s.title), ['Uno', 'Tres', 'Dos']);
+  close();
+});

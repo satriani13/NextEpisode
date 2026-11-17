@@ -97,6 +97,7 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAIL
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.9.2** — «Vistas» y «Quiero ver» se ordenan de más reciente a menos reciente de forma determinista (desempate por orden de inserción cuando coinciden en el mismo segundo); 31 tests.
 - **0.9.1** — al publicar una puntuación sin comentario, la app sugiere añadir uno (ayuda a otros a ver si la serie les encaja) con dos opciones: «Añadir un comentario» o «Publicar sin comentario». Solo avisa una vez por intento.
 - **0.9.0** — reparto en la ficha de la serie (12 intérpretes con foto y personaje, carrusel horizontal; series antiguas lo rellenan al abrirse); 30 tests.
 - **0.8.3** — la web se puede instalar en la pantalla de inicio de Android e iPhone: icono propio (antes el genérico de Expo), `manifest.json` (modo standalone, rutas relativas al subpath) y `apple-touch-icon`. Manual paso a paso con pantallas en `docs/manual-instalacion.html`.

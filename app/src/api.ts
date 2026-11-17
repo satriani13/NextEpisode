@@ -94,6 +94,7 @@ export const api = {
     request<{ id: number; created: boolean }>('POST', '/shows', b),
   show: (id: number) => request<ShowDetail>('GET', `/shows/${id}`),
   reviews: (id: number) => request<Review[]>('GET', `/shows/${id}/reviews`),
+  suggest: (body: string) => request<{ ok: true }>('POST', '/suggestions', { body }),
   rate: (id: number, rating: number, body: string) => request<{ ok: true }>('POST', `/shows/${id}/reviews`, { rating, body }),
   watchlist: () => request<WatchItem[]>('GET', '/me/watchlist'),
   addWatch: (id: number) => request<{ ok: true }>('PUT', `/me/watchlist/${id}`),

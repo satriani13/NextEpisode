@@ -23,6 +23,7 @@ import AddShowScreen from './src/screens/AddShowScreen';
 import RecommendationsScreen from './src/screens/RecommendationsScreen';
 import MyShowsScreen from './src/screens/MyShowsScreen';
 import UsersScreen from './src/screens/UsersScreen';
+import SuggestScreen from './src/screens/SuggestScreen';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -55,6 +56,7 @@ function Root() {
             <Stack.Screen name="Home" component={Home} />
             <Stack.Screen name="Show" component={ShowScreen} />
             <Stack.Screen name="AddShow" component={AddShowScreen} />
+            <Stack.Screen name="Suggest" component={SuggestScreen} />
           </>
         ) : (
           <>

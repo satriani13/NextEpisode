@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   ActivityIndicator, Image, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputProps, TextProps, View, ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  ArrowRight, Check, Eye, EyeSlash, FilmSlate, SignOut, Star, WarningCircle, CaretRight,
+  ArrowRight, Check, Eye, EyeSlash, FilmSlate, Lightbulb, SignOut, Star, WarningCircle, CaretRight,
 } from '../icons';
 import { colors, font, radius, type, web } from '../theme';
 import { Aurora, FadeUp, PressScale, Skeleton } from '../motion';
@@ -220,6 +221,7 @@ export function ScreenHeader({ eyebrow, title }: { eyebrow?: string; title: stri
 
 export function AccountMenu() {
   const { user, signOut } = useAuth();
+  const navigation = useNavigation<any>();
   const [open, setOpen] = useState(false);
   return (
     <View style={{ zIndex: 30 }}>
@@ -230,6 +232,10 @@ export function AccountMenu() {
         <FadeUp y={-6} style={[s.menu, web({ boxShadow: '0 24px 50px -20px rgba(0,0,0,0.8)' })]}>
           <T v="bodyMed" style={{ fontFamily: font.bodySemi }} numberOfLines={1}>{user?.username}</T>
           <T v="caption" color={colors.muted} style={{ marginBottom: 10 }}>{user?.admin ? 'Administrador' : 'Usuario'}</T>
+          <PressScale onPress={() => { setOpen(false); navigation.navigate('Suggest'); }} accessibilityRole="button" accessibilityLabel="Sugerencias" style={[s.menuItem, { marginBottom: 8 }]}>
+            <Lightbulb size={18} color={colors.accent} />
+            <T v="small" color={colors.text} style={{ fontFamily: font.bodyMed }}>Sugerencias</T>
+          </PressScale>
           <PressScale onPress={signOut} accessibilityRole="button" accessibilityLabel="Cerrar sesión" style={s.menuItem}>
             <SignOut size={18} color={colors.accent} />
             <T v="small" color={colors.text} style={{ fontFamily: font.bodyMed }}>Cerrar sesión</T>

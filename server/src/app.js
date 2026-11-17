@@ -10,7 +10,7 @@ const PROVIDER_TTL_HOURS = 24;
 
 export function createApp({
   db, tmdb, jwtSecret = process.env.JWT_SECRET,
-  mailer = { async sendResetCode() {} },
+  mailer = { async sendResetCode() {}, async sendSuggestion() { return false; } },
   adminEmails = (process.env.ADMIN_EMAILS || '').split(','),
   now = () => Date.now(),
 }) {
@@ -361,6 +361,21 @@ export function createApp({
   app.delete('/api/me/watchlist/:id', auth, (req, res) => {
     db.prepare('DELETE FROM watchlist WHERE user_id = ? AND show_id = ?').run(req.user.id, req.params.id);
     res.json({ ok: true });
+  });
+
+  // ---- Sugerencias: se guardan siempre y se avisa por correo (si falla el SMTP no se pierden).
+  app.post('/api/suggestions', auth, (req, res) => {
+    const body = typeof req.body?.body === 'string' ? req.body.body.trim() : '';
+    if (body.length < 10) return bad(res, 'Cuéntanos un poco más (mínimo 10 caracteres)');
+    if (body.length > 2000) return bad(res, 'La sugerencia es demasiado larga (máximo 2000 caracteres)');
+    const recent = db.prepare("SELECT COUNT(*) AS n FROM suggestions WHERE user_id = ? AND created_at > datetime('now','-1 hour')").get(req.user.id).n;
+    if (recent >= 5 && process.env.NODE_ENV !== 'test') return bad(res, 'Has enviado varias sugerencias seguidas. Prueba de nuevo en un rato.', 429);
+    const id = Number(db.prepare('INSERT INTO suggestions (user_id, body) VALUES (?, ?)').run(req.user.id, body).lastInsertRowid);
+    const row = db.prepare('SELECT created_at FROM suggestions WHERE id = ?').get(id);
+    Promise.resolve(mailer.sendSuggestion({ username: req.user.username, email: req.user.email, body, createdAt: row.created_at }))
+      .then((sent) => { if (sent) db.prepare('UPDATE suggestions SET emailed = 1 WHERE id = ?').run(id); })
+      .catch((e) => console.error('Fallo enviando la sugerencia por correo:', e.message));
+    res.status(201).json({ ok: true });
   });
 
   app.get('/api/me/reviews', auth, (req, res) => {

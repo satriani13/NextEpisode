@@ -75,6 +75,13 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
       UNIQUE (user_id, show_id)
     );
     CREATE INDEX IF NOT EXISTS idx_reviews_show ON reviews(show_id);
+    CREATE TABLE IF NOT EXISTS suggestions (
+      id INTEGER PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      body TEXT NOT NULL,
+      emailed INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
   // Migración para BDs creadas antes de existir original_title.
   if (!db.prepare('PRAGMA table_info(shows)').all().some((c) => c.name === 'original_title')) {

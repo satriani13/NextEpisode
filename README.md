@@ -87,7 +87,7 @@ npm test                                              # 5 tests con TMDB simulad
 cd app && npm install && npx expo start --ios        # en desarrollo usa http://localhost:3025/api; en build de producción, la URL del VPS (o EXPO_PUBLIC_API_URL)
 # Sin Xcode: npx expo start --web (arranca el servidor con CORS_ORIGIN=http://localhost:8081, o el puerto que uses)
 ```
-Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAILS` (emails separados por comas; quien se registre con uno de ellos es administrador; no hay forma de ascender desde la app), `SMTP_USER` + `SMTP_PASS` (+ `SMTP_HOST`=smtp.gmail.com, `SMTP_PORT`=587 con STARTTLS (el VPS bloquea los puertos de salida 25 y 465), `MAIL_FROM`) para el correo de recuperación (Gmail con *contraseña de aplicación*; sin ellos no se envía nada y en desarrollo el código sale por consola), `PORT` (3025), `DB_PATH` (`data/nextepisode.db`), `CORS_ORIGIN` (opcional; solo para probar la app web, no hace falta en móvil ni en producción).
+Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAILS` (emails separados por comas; quien se registre con uno de ellos es administrador; no hay forma de ascender desde la app), `SMTP_USER` + `SMTP_PASS` (+ `SMTP_HOST`=smtp.gmail.com, `SMTP_PORT`=587 con STARTTLS (el VPS bloquea los puertos de salida 25 y 465), `MAIL_FROM`) para el correo de recuperación y el de sugerencias (destinatario de estas: `SUGGESTIONS_TO`, por defecto `julio.pajuelo@gmail.com`) (Gmail con *contraseña de aplicación*; sin ellos no se envía nada y en desarrollo el código sale por consola), `PORT` (3025), `DB_PATH` (`data/nextepisode.db`), `CORS_ORIGIN` (opcional; solo para probar la app web, no hace falta en móvil ni en producción).
 
 ## Limitaciones conocidas / pendiente
 - App sin publicar (TestFlight/Play Store); la API pública no tiene aún copias de seguridad automáticas de la BD.
@@ -97,6 +97,7 @@ Variables del servidor: `JWT_SECRET` (obligatoria), `TMDB_API_KEY`, `ADMIN_EMAIL
 - No probada en simulador/dispositivo iOS (este Mac no tiene Xcode completo); probada en web. En web el token va en `localStorage` (solo para desarrollo; en móvil usa SecureStore).
 
 ## Changelog
+- **0.10.0** — **Sugerencias**: opción nueva en el menú del avatar (pantalla «Sugerencias», mínimo 10 y máximo 2000 caracteres). `POST /api/suggestions` (con sesión; máx. 5 por usuario y hora) guarda la sugerencia en la tabla `suggestions` (`user_id`, `body`, `emailed`, `created_at`) y envía un correo con el diseño de la app (fondo `#0B0B10`, acento ember) con usuario, email, fecha y texto; `Reply-To` = email del usuario. Si el SMTP falla la sugerencia no se pierde (`emailed=0`) y el usuario no ve error; 35 tests.
 - **0.9.2** — «Vistas» y «Quiero ver» se ordenan de más reciente a menos reciente de forma determinista (desempate por orden de inserción cuando coinciden en el mismo segundo); 31 tests.
 - **0.9.1** — al publicar una puntuación sin comentario, la app sugiere añadir uno (ayuda a otros a ver si la serie les encaja) con dos opciones: «Añadir un comentario» o «Publicar sin comentario». Solo avisa una vez por intento.
 - **0.9.0** — reparto en la ficha de la serie (12 intérpretes con foto y personaje, carrusel horizontal; series antiguas lo rellenan al abrirse); 30 tests.

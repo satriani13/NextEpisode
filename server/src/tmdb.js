@@ -38,6 +38,12 @@ export function createTmdb({ apiKey = process.env.TMDB_API_KEY, fetchImpl = fetc
     character: p.roles?.[0]?.character || null,
     photo_url: p.profile_path ? `${IMG}/w185${p.profile_path}` : null,
   }));
+  // Tráiler: vídeo de YouTube tipo «Trailer»; prioriza oficial, luego idioma español, luego inglés. Devuelve la clave o null.
+  const mapTrailer = (v) => {
+    const list = (v?.results || []).filter((x) => x.site === 'YouTube' && x.key && (x.type === 'Trailer' || x.type === 'Teaser'));
+    const score = (x) => (x.type === 'Trailer' ? 4 : 0) + (x.official ? 2 : 0) + (x.iso_639_1 === 'es' ? 1 : 0);
+    return list.sort((a, b) => score(b) - score(a))[0]?.key ?? null;
+  };
   const mapShow = (r) => ({
     tmdb_id: r.id,
     title: r.name,
@@ -63,8 +69,8 @@ export function createTmdb({ apiKey = process.env.TMDB_API_KEY, fetchImpl = fetc
     },
     // Ficha completa: temporadas/estado y reparto principal (aggregate_credits suma los episodios de cada actor).
     async details(tmdbId) {
-      const r = await get(`/tv/${tmdbId}`, { append_to_response: 'aggregate_credits' });
-      return { ...mapShow(r), cast: mapCast(r.aggregate_credits) };
+      const r = await get(`/tv/${tmdbId}`, { append_to_response: 'aggregate_credits,videos', include_video_language: 'es,en,null' });
+      return { ...mapShow(r), cast: mapCast(r.aggregate_credits), trailer: mapTrailer(r.videos) };
     },
     // Descubrir por género(s) y plataforma(s): varios géneros/plataformas = "o" (separados por |).
     // `sort`: 'new' = estrenos más recientes de lo que se puede ver en streaming en el país; 'popular' = más populares.

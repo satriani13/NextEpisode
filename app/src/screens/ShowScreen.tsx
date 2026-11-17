@@ -1,8 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BookmarkSimple, Check, TelevisionSimple } from '../icons';
+import { BookmarkSimple, Check, Play, TelevisionSimple, X } from '../icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, Review, ShowDetail } from '../api';
 import { FadeUp, PressScale, Skeleton } from '../motion';
@@ -23,6 +23,7 @@ export default function ShowScreen({ route, navigation }: any) {
   const [more, setMore] = useState(false);
   const [inList, setInList] = useState(false);
   const [listBusy, setListBusy] = useState(false);
+  const [trailerOpen, setTrailerOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -43,6 +44,13 @@ export default function ShowScreen({ route, navigation }: any) {
     setNudge(false); setError(''); setSaved(false); setSaving(true);
     try { await api.rate(id, rating, body); setSaved(true); await load(); }
     catch (e: any) { setError(e.message); } finally { setSaving(false); }
+  }
+
+  // Tráiler: en la web se reproduce en un visor dentro de la app; en el móvil se abre en YouTube.
+  function playTrailer() {
+    if (!show?.trailer) return;
+    if (Platform.OS === 'web') setTrailerOpen(true);
+    else Linking.openURL(`https://www.youtube.com/watch?v=${show.trailer}`).catch(() => setError('No se pudo abrir el tráiler'));
   }
 
   // «Quiero ver»: cambia al instante y se deshace si el servidor falla.
@@ -79,6 +87,14 @@ export default function ShowScreen({ route, navigation }: any) {
         <View style={{ height: 360 }}>
           <Poster uri={show.backdrop_url || show.poster_url} title={show.title} style={StyleSheet.absoluteFill} />
           <LinearGradient colors={['rgba(11,11,16,0.55)', 'rgba(11,11,16,0.15)', colors.bg]} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+          {show.trailer ? (
+            <Pressable onPress={playTrailer} accessibilityRole="button" accessibilityLabel={`Ver el tráiler de ${show.title}`} style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', paddingBottom: 40 }]}>
+              <View style={s.playShell}>
+                <View style={s.playCore}><Play size={26} weight="fill" color={colors.accentInk} /></View>
+              </View>
+              <T v="caption" color={colors.text} style={{ marginTop: 10, fontFamily: font.bodySemi }}>Ver tráiler</T>
+            </Pressable>
+          ) : null}
           <View style={{ position: 'absolute', top: insets.top + 16, left: 16 }}><BackButton onPress={() => navigation.goBack()} /></View>
           <FadeUp style={{ position: 'absolute', left: 20, right: 20, bottom: 8 }}>
             <T v="display" numberOfLines={3} accessibilityRole="header">{show.title}</T>
@@ -206,11 +222,29 @@ export default function ShowScreen({ route, navigation }: any) {
           </View>
         </View>
       </ScrollView>
+      <Modal visible={trailerOpen} transparent animationType="fade" onRequestClose={() => setTrailerOpen(false)}>
+        <View style={s.modalBg}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setTrailerOpen(false)} accessibilityLabel="Cerrar tráiler" />
+          <View style={s.modalBox}>
+            {trailerOpen && show.trailer ? React.createElement('iframe', {
+              src: `https://www.youtube-nocookie.com/embed/${show.trailer}?autoplay=1&rel=0&playsinline=1`,
+              title: `Tráiler de ${show.title}`, allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen', allowFullScreen: true,
+              style: { width: '100%', height: '100%', border: 0, borderRadius: 18 },
+            }) : null}
+          </View>
+          <Pressable onPress={() => setTrailerOpen(false)} accessibilityRole="button" accessibilityLabel="Cerrar tráiler" style={s.modalClose}><X size={22} color={colors.text} /></Pressable>
+        </View>
+      </Modal>
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
+  playShell: { width: 76, height: 76, borderRadius: 38, padding: 6, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+  playCore: { flex: 1, borderRadius: 32, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', paddingLeft: 3 },
+  modalBg: { flex: 1, backgroundColor: 'rgba(5,5,8,0.88)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  modalBox: { width: '100%', maxWidth: 900, aspectRatio: 16 / 9, backgroundColor: '#000', borderRadius: 18, overflow: 'hidden' },
+  modalClose: { position: 'absolute', top: 20, right: 20, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.glassHi, alignItems: 'center', justifyContent: 'center' },
   fact: { minHeight: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline, justifyContent: 'center' },
   factMain: { backgroundColor: colors.glassHi },
   watch: { alignSelf: 'flex-start', minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.hairline },

@@ -96,7 +96,7 @@ export function openDb(file = process.env.DB_PATH || 'data/nextepisode.db') {
   if (!db.prepare('PRAGMA table_info(user_prefs)').all().some((c) => c.name === 'origin')) {
     db.exec("ALTER TABLE user_prefs ADD COLUMN origin TEXT NOT NULL DEFAULT 'country'");
   }
-  for (const col of ['seasons INTEGER', 'episodes INTEGER', 'status TEXT', 'details_at TEXT', 'cast_json TEXT']) {
+  for (const col of ['seasons INTEGER', 'episodes INTEGER', 'status TEXT', 'details_at TEXT', 'cast_json TEXT', 'trailer_key TEXT']) {
     if (!db.prepare('PRAGMA table_info(shows)').all().some((c) => c.name === col.split(' ')[0])) db.exec(`ALTER TABLE shows ADD COLUMN ${col}`);
   }
   return db;

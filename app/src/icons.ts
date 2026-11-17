@@ -20,3 +20,4 @@ export { X } from 'phosphor-react-native/src/icons/X';
 export { BookmarkSimple } from 'phosphor-react-native/src/icons/BookmarkSimple';
 export { Plus } from 'phosphor-react-native/src/icons/Plus';
 export { Lightbulb } from 'phosphor-react-native/src/icons/Lightbulb';
+export { Play } from 'phosphor-react-native/src/icons/Play';

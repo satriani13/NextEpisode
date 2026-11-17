@@ -21,6 +21,7 @@ export default function DiscoverScreen({ navigation }: any) {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [sort, setSort] = useState<'new' | 'popular'>('new');
+  const [personal, setPersonal] = useState(true); // afinar con mi historial (puntuaciones y «Quiero ver»)
   const [origin, setOrigin] = useState<Origin>('country'); // por defecto: solo producciones de mi país
   const dirty = useRef(false);
 
@@ -50,13 +51,13 @@ export default function DiscoverScreen({ navigation }: any) {
     let alive = true;
     setLoading(true); setError('');
     const h = setTimeout(() => {
-      (term.length >= 2 ? api.search(term, genres) : api.discover(genres, providers, sort, origin))
+      (term.length >= 2 ? api.search(term, genres) : api.discover(genres, providers, sort, origin, personal))
         .then((r) => alive && setRes(r))
         .catch((e) => alive && setError(e.message))
         .finally(() => alive && setLoading(false));
     }, term ? 320 : 120);
     return () => { alive = false; clearTimeout(h); };
-  }, [ready, term, genres, providers, sort, origin, retry]);
+  }, [ready, term, genres, providers, sort, origin, personal, retry]);
 
   const toggle = (list: number[], set: (n: number[]) => void, id: number) => {
     dirty.current = true;
@@ -95,9 +96,11 @@ export default function DiscoverScreen({ navigation }: any) {
   const mix = [originOn ? `Series de ${countryName}` : '', pNames.join(', '), gNames.join(', ')].filter(Boolean).join(' · ');
   const novelty = sort === 'new' && term.length < 2;
   const picked = genres.length + providers.length > 0; // el país es un ajuste aparte: no cuenta como «mezcla»
-  const heading = term.length >= 2 ? `Resultados para “${term}”` : novelty ? (picked ? 'Novedades para tu mezcla' : 'Últimos estrenos') : picked ? 'Para tu mezcla' : 'Lo más visto ahora';
+  const taste = term.length < 2 && !genres.length ? res?.taste : null; // géneros deducidos de tu historial
+  const heading = term.length >= 2 ? `Resultados para “${term}”` : taste ? (novelty ? 'Novedades para ti' : 'Elegido para ti') : novelty ? (picked ? 'Novedades para tu mezcla' : 'Últimos estrenos') : picked ? 'Para tu mezcla' : 'Lo más visto ahora';
   const sub = term.length >= 2
     ? (gNames.length ? `Primero lo que encaja con ${gNames.join(', ')}` : 'Elige géneros para que suban los que más te apetecen')
+    : taste ? [`Por lo que has visto y puntuado: ${taste.genres.join(', ')}`, originOn ? `series de ${countryName}` : '', pNames.join(', ')].filter(Boolean).join(' · ')
     : mix || (novelty ? 'Lo más reciente en streaming en tu país' : 'Elige plataformas y géneros para afinar');
   const hasFilters = genres.length + providers.length > 0;
   const [hero, ...rest] = cards;
@@ -163,14 +166,15 @@ export default function DiscoverScreen({ navigation }: any) {
         )}
 
         {term.length < 2 && (
-          <View style={{ paddingHorizontal: 20, marginBottom: 20, alignItems: 'flex-start' }}>
+          <View style={{ paddingHorizontal: 20, marginBottom: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Chip label="Afinado a tus gustos" selected={personal} onPress={() => setPersonal((v) => !v)} />
             <Chip label={`Solo series de ${countryName}`} selected={originOn} onPress={toggleOrigin} />
           </View>
         )}
 
         {loading ? <ResultsSkeleton /> : error ? <ErrorBanner text={error} onRetry={() => setRetry((r) => r + 1)} /> : cards.length ? (
           <View style={{ paddingHorizontal: 20, gap: 20 }}>
-            <FeaturedCard card={hero} label={novelty ? 'Último estreno' : hasFilters ? 'Encaja contigo' : 'Lo más visto'} />
+            <FeaturedCard card={hero} label={novelty ? 'Último estreno' : hasFilters || taste ? 'Encaja contigo' : 'Lo más visto'} />
             {rest.length > 0 && (
               <View style={{ flexDirection: 'row', gap: 14 }}>
                 <View style={{ flex: 1, gap: 20 }}>{left.map((c, i) => <FadeUp key={c.key} delay={i * 60}><ShowCard card={c} /></FadeUp>)}</View>

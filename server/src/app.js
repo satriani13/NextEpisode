@@ -233,17 +233,46 @@ export function createApp({
     res.json({ ok: true });
   });
 
+  // ---- Gustos del usuario: se deducen de su historial. Cada serie puntuada pesa (nota − 3) + 0,25 por haberla visto
+  // (5★ = +2,25 · 1★ = −1,75) y cada «Quiero ver» suma +0,75, repartido entre los géneros de la serie.
+  const genreIdsOf = (text) => {
+    const t = String(text || '').toLowerCase();
+    return GENRES.filter((g) => g.match.some((m) => t.includes(m.toLowerCase()))).map((g) => g.id);
+  };
+  function tasteOf(userId) {
+    const scores = new Map();
+    const add = (text, w) => { for (const id of genreIdsOf(text)) scores.set(id, (scores.get(id) || 0) + w); };
+    const rated = db.prepare('SELECT s.genres, s.tmdb_id, r.rating FROM reviews r JOIN shows s ON s.id = r.show_id WHERE r.user_id = ?').all(userId);
+    for (const r of rated) add(r.genres, r.rating - 3 + 0.25);
+    const wanted = db.prepare('SELECT s.genres FROM watchlist w JOIN shows s ON s.id = w.show_id WHERE w.user_id = ?').all(userId);
+    for (const w of wanted) add(w.genres, 0.75);
+    const top = [...scores].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id]) => id);
+    const seen = new Set(rated.map((r) => r.tmdb_id).filter(Boolean));
+    return { scores, top, seen, signals: rated.length + wanted.length };
+  }
+  const affinity = (taste, text) => genreIdsOf(text).reduce((a, id) => a + (taste.scores.get(id) || 0), 0);
+
   // Descubrir por géneros y/o plataformas. Con plataformas manda TMDB (sabe dónde está cada serie);
   // las que ya están en nuestro catálogo salen como "catalog" con su nota de la comunidad.
   app.get('/api/discover', auth, wrap(async (req, res) => {
-    const gids = ids(req.query.genres);
+    let gids = ids(req.query.genres);
     const pids = ids(req.query.providers);
     const country = String(req.query.country || req.user.country).toUpperCase();
     const sort = req.query.sort === 'new' ? 'new' : 'popular';
+    // personal=1: la portada se afina con el historial. Sin géneros elegidos se usan los favoritos deducidos;
+    // siempre se ocultan las series ya puntuadas y, en «Populares», suben las que encajan con tus gustos.
+    const taste = req.query.personal === '1' ? tasteOf(req.user.id) : null;
+    const implicit = Boolean(taste && !gids.length && taste.top.length);
+    if (implicit) gids = taste.top;
     // origin=country: solo producciones del país del usuario (o ?country=); por defecto, de todo el mundo.
     const origin = req.query.origin === 'country' ? country : null;
     let found = [];
     try { found = (await tmdb.discover?.({ genres: gids, providers: pids, country, sort, origin })) || []; } catch { /* sin TMDB: solo catálogo propio */ }
+    if (taste) {
+      found = found.filter((f) => !taste.seen.has(f.tmdb_id));
+      if (sort === 'popular') found = found.map((f, i) => ({ f, i, a: affinity(taste, f.genres) })).sort((x, y) => y.a - x.a || x.i - y.i).map((x) => x.f);
+    }
+    const tasteInfo = implicit ? { genres: GENRES.filter((g) => taste.top.includes(g.id)).map((g) => g.name), signals: taste.signals } : null;
     const known = found.length
       ? db.prepare(`${showSelect} WHERE s.tmdb_id IN (${found.map(() => '?').join(',')}) GROUP BY s.id`).all(...found.map((f) => f.tmdb_id))
       : [];
@@ -251,6 +280,7 @@ export function createApp({
     // Novedades: un único orden por fecha de estreno. Las series ya importadas llevan su `show_id` y su nota.
     if (sort === 'new') {
       return res.json({
+        taste: tasteInfo,
         catalog: [],
         tmdb: found.map((f) => {
           const k = byTmdb.get(f.tmdb_id);
@@ -267,8 +297,12 @@ export function createApp({
         ? db.prepare(`${showSelect} WHERE ${pats.map(() => 's.genres LIKE ?').join(' OR ')} GROUP BY s.id ORDER BY ratings_count DESC, avg_rating DESC LIMIT 20`).all(...pats.map((p) => `%${p}%`))
         : db.prepare(`${showSelect} GROUP BY s.id HAVING ratings_count > 0 ORDER BY avg_rating DESC, ratings_count DESC LIMIT 10`).all();
     }
+    if (taste) {
+      catalog = catalog.filter((c) => !c.tmdb_id || !taste.seen.has(c.tmdb_id)).filter((c) => !db.prepare('SELECT 1 FROM reviews WHERE user_id = ? AND show_id = ?').get(req.user.id, c.id));
+      catalog.sort((a, b) => affinity(taste, b.genres) - affinity(taste, a.genres));
+    }
     const inCatalog = new Set(catalog.map((c) => c.tmdb_id).filter(Boolean));
-    res.json({ catalog, tmdb: found.filter((f) => !inCatalog.has(f.tmdb_id)) });
+    res.json({ taste: tasteInfo, catalog, tmdb: found.filter((f) => !inCatalog.has(f.tmdb_id)) });
   }));
 
   app.post('/api/shows', auth, wrap(async (req, res) => {

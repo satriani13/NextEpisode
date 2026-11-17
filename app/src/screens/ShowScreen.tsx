@@ -19,6 +19,7 @@ export default function ShowScreen({ route, navigation }: any) {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [nudge, setNudge] = useState(false);
   const [more, setMore] = useState(false);
   const [inList, setInList] = useState(false);
   const [listBusy, setListBusy] = useState(false);
@@ -32,8 +33,14 @@ export default function ShowScreen({ route, navigation }: any) {
   }, [id]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  // Sin comentario, antes de publicar se sugiere añadir uno (una sola vez por intento).
+  function submit() {
+    if (!body.trim() && !nudge) { setNudge(true); return; }
+    save();
+  }
+
   async function save() {
-    setError(''); setSaved(false); setSaving(true);
+    setNudge(false); setError(''); setSaved(false); setSaving(true);
     try { await api.rate(id, rating, body); setSaved(true); await load(); }
     catch (e: any) { setError(e.message); } finally { setSaving(false); }
   }
@@ -158,15 +165,23 @@ export default function ShowScreen({ route, navigation }: any) {
         <FadeUp delay={260} style={{ paddingHorizontal: 20, marginTop: 28 }}>
           <GlassCard>
             <T v="heading">{show.my_review ? 'Tu opinión' : '¿Qué te ha parecido?'}</T>
-            <View style={{ marginVertical: 14, marginLeft: -4 }}><Stars value={rating} onChange={setRating} size={34} /></View>
-            <Field label="Cuéntalo (opcional)" multiline value={body} onChangeText={setBody} maxLength={2000} placeholder="Qué te gustó, qué no, a quién se la recomendarías…" />
+            <View style={{ marginVertical: 14, marginLeft: -4 }}><Stars value={rating} onChange={(v) => { setRating(v); setNudge(false); }} size={34} /></View>
+            <Field label="Cuéntalo (opcional)" multiline value={body} onChangeText={(t) => { setBody(t); setNudge(false); }} maxLength={2000} placeholder="Qué te gustó, qué no, a quién se la recomendarías…" />
             {error ? <ErrorBanner text={error} /> : null}
             {saved ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }} accessibilityLiveRegion="polite">
                 <Check size={16} weight="bold" color={colors.success} /><T v="small" color={colors.success}>Guardado</T>
               </View>
             ) : null}
-            <Button title={show.my_review ? 'Actualizar opinión' : 'Publicar opinión'} onPress={save} disabled={rating === 0} loading={saving} />
+            {nudge ? (
+              <View style={{ marginBottom: 14, gap: 10 }} accessibilityLiveRegion="polite">
+                <T v="small" color={colors.textDim}>Un comentario ayuda a otros a saber si esta serie puede encajarles. Cuenta en una frase qué te pareció, o publica solo la puntuación.</T>
+                <Button title="Añadir un comentario" variant="glass" onPress={() => setNudge(false)} />
+                <Button title="Publicar sin comentario" variant="ghost" onPress={save} loading={saving} />
+              </View>
+            ) : (
+              <Button title={show.my_review ? 'Actualizar opinión' : 'Publicar opinión'} onPress={submit} disabled={rating === 0} loading={saving} />
+            )}
           </GlassCard>
         </FadeUp>
 
